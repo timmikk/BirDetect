@@ -290,18 +290,28 @@ def mean_energy(signal, rate):
     return e.mean()
 
 
-def validate_signal(signal, rate, min_energy=0.82):
-    logger.debug('Validating signal')
-
+def validate_signal(signal, rate, min_energy=0.5, min_length=0.5):
     if signal.size == 0:
-        logger.debug('Signal length is zero -> Signal is invalid')
+        logger.debug('Signal length is 0 -> signal is invalid')
+        return False
+    mean_e = mean_energy(signal, rate)
+    signal_size = signal.size
+    min_len = min_length*rate
+
+    logger.debug('Validating signal: energy_mean: ' + str(mean_e) + ' len: ' + str(signal_size*rate))
+
+    if signal.size < min_length*rate:
+        logger.debug('Signal is too short (' + str(signal.size*rate) + ' < '+ str(min_length) +') -> Signal is invalid')
         return False
 
-    mean_e = mean_energy(signal, rate)
     logger.debug('Signal mean energy is ' + str(mean_e))
 
+    if np.isnan(mean_e):
+        logger.debug('Signal is empty ('+ str(mean_e) +')')
+        return False
+
     if mean_e < min_energy:
-        logger.debug('Signal mean energy is under' + str(min_energy) + ' -> Signal is invalid')
+        logger.debug('Signal mean energy ('+ str(mean_e) +') is under' + str(min_energy) + ' -> Signal is invalid')
         return False
 
     logger.debug('Signal is valid')
@@ -333,7 +343,7 @@ def split_signal_by_silence(signal, rate):
 
 
 def gen_wav_filename(dest, name, number):
-    wav_file = name + '_' + str(number) + '.wav'
+    wav_file = name + '-split_' + str(number) + '.wav'
 
     generated = os.path.join(dest, wav_file)
     logger.debug('Generated wav filename: ' + generated)
@@ -607,6 +617,8 @@ def recursive_plot(path, pdf_file, img_path):
         if figure != None:
             #pp.savefig(figure, dpi=200)
             image_file = os.path.join(img_path, str(filename) + '_fig' + str(fignum) + '.png')
+
+
             figure.savefig(image_file, dpi=200)
             #plt.show()
             #figures.append(figure)
@@ -625,6 +637,7 @@ def recursively_plot_wav_files(path, img_path, fignum=0):
     for f in os.listdir(path):
         f_location = os.path.join(path, f)
         if is_wav_file(f_location):
+            logger.debug('Process file: ' + f_location)
             stripped_filename = strip_filename(f)
             #split_dir = os.path.join(img_path, stripped_filename)
             split_dir = img_path
@@ -634,12 +647,15 @@ def recursively_plot_wav_files(path, img_path, fignum=0):
                 check_or_make_dir(split_dir)
                 #pp.savefig(figure, dpi=200)
                 image_file = os.path.join(split_dir, str(f) + '_fig' + str(fignum) + '.png')
+                logger.debug('Save plot to file: ' + image_file)
                 figure.savefig(unicode(image_file), dpi=200)
+                logger.debug('Plot saved')
                 #plt.show()
                 #figures.append(figure)
             fignum += 1
 
         elif os.path.isdir(f_location):
+            logger.debug('Process location: ' + f_location)
             new_path = os.path.join(path, f)
             new_dest = os.path.join(img_path, f)
             recursively_plot_wav_files(new_path, new_dest, fignum)
@@ -654,15 +670,19 @@ def recursively_split_wav_files(path, dest, invalid_dest):
     for f in os.listdir(path):
         f_location = os.path.join(path, f)
         if is_wav_file(f_location):
-            stripped_filename = strip_filename(f)
-            split_dir = os.path.join(dest, stripped_filename)
-            invalid_split_dir = os.path.join(invalid_dest, stripped_filename)
-            split_wav_by_silence(f_location, split_dir, invalid_split_dir)
+            logger.debug('Process file: ' + f_location)
+            #stripped_filename = strip_filename(f)
+            #split_dir = os.path.join(dest, stripped_filename)
+            #invalid_split_dir = os.path.join(invalid_dest, stripped_filename)
+            #split_wav_by_silence(f_location, split_dir, invalid_split_dir)
+            split_wav_by_silence(f_location, dest, invalid_dest)
 
         elif os.path.isdir(f_location):
+            logger.debug('Process location: ' + f_location)
             new_path = os.path.join(path, f)
             new_dest = os.path.join(dest, f)
-            recursively_split_wav_files(new_path, new_dest, invalid_dest)
+            new_invalid_dest = os.path.join(invalid_dest, f)
+            recursively_split_wav_files(new_path, new_dest, new_invalid_dest)
 
         else:
             logger.info('Unknown file type: ' + str(f_location))
@@ -675,22 +695,29 @@ matplotlib.rcParams.update({'font.size': 5})
 
 
 #wav_file = os.path.abspath(str(sys.argv[1]))
-src_path = os.path.abspath(str(sys.argv[1]))
-dest_path = os.path.abspath(str(sys.argv[2]))
-invalid_dest_path = os.path.abspath(str(sys.argv[3]))
-pdf_file = os.path.abspath(str(sys.argv[4]))
-img_file = os.path.abspath(str(sys.argv[5]))
-
-check_or_make_dir(img_file)
+#src_path = os.path.abspath(str(sys.argv[1]))
+#dest_path = os.path.abspath(str(sys.argv[2]))
+#invalid_dest_path = os.path.abspath(str(sys.argv[3]))
+#pdf_file = os.path.abspath(str(sys.argv[4]))
+#img_file = os.path.abspath(str(sys.argv[5]))
 
 
-#split_wav_by_silence(wav_file, dest_path)
-recursively_split_wav_files(src_path, dest_path, invalid_dest_path)
-#recursive_plot(src_path, pdf_file, img_file)
-recursively_plot_wav_files(src_path, img_file)
+
+
+
+#check_or_make_dir(img_file)
+
+
+#recursively_split_wav_files(src_path, dest_path, invalid_dest_path)
+#recursively_plot_wav_files(src_path, img_file)
 
 #(rate, signal) = scipy.io.wavfile.read(str(wav_file))
 #(signal, rate) = load_wav_as_mono(wav_file)
 #scipy.io.wavfile.write('/home/timo/temp/testi.wav', rate, signal)
 
+#(rate, signal) = scipy.io.wavfile.read(str('/Tavara/Ohjelmointi/BirDetect/birds/data/snd/train/Bird_Sounds_of_Europe_and_North-West-Africa/accipiter_nisus-split_4.wav'))
 
+
+#valid = validate_signal(signal, rate)
+
+#print 'valid=' + str(valid)
