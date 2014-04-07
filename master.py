@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 base_path = os.getcwd()
 print 'base path: ' + base_path
-exit(0)
 
 orig_sound_path = os.path.join(base_path, 'snd_orig')
 sound_path = os.path.join(base_path, 'snd')
