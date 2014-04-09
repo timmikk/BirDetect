@@ -41,21 +41,36 @@ ivec_machine_file = os.path.join(analyze_path, 'tv.hdf5')
 ivec_dir = os.path.join(analyze_path, 'ivectors')
 
 gmm_machine_file = os.path.join(analyze_path, 'gmm_machine.hdf5')
+map_gmm_dir = os.path.join(analyze_path, 'map_gmm')
 
-
-eval_score_file = os.path.join(analyze_path, 'score-eval.txt')
+eval_ivector_score_file = os.path.join(analyze_path, 'score-ivector-eval.txt')
+eval_map_gmm_score_file = os.path.join(analyze_path, 'score-map_gmm-eval.txt')
 
 map_gmm_relevance = 4
 map_gmm_convergence_threshold = 1e-5
 map_gmm_max_iterations = 200
 
 
-num_gauss = 16# 128 512
+num_gauss = 19# 128 512
 
 ubm_convergence_threshold = 1e-4
 ubm_max_iterations = 10
 
 
+def gen_score_file(files, score_file):
+    #Load all ivec file names to array
+    #Compare files to each other and write to score file
+
+    f = open(score_file, 'w')
+
+    for f1 in files:
+        for f2 in files:
+            f1_loaded = bob.io.load(f1)
+            f2_loaded = bob.io.load(f2)
+            score = utils.cosine_score(f1_loaded, f2_loaded)
+            f.write('\"'+f1[len(ivec_dir)+1:] + '\",\"' + f2[len(ivec_dir)+1:] + '\",\"' + str(score) + '\"\n')
+
+    f.close()
 
 
 #EXECUTE!!
@@ -105,7 +120,7 @@ if os.path.isfile(kmeans_file):
     kmeans = bob.machine.KMeansMachine(kmeans_hdf5)
     logger.info('K-Means file loaded')
 else:
-    kmeans = analyze.train_k_means(train_features, num_gauss)
+    kmeans = analyze.train_kmeans(train_features, num_gauss)
     logger.info('save K-Means to file: ' + kmeans_file)
     kmeans.save(bob.io.HDF5File(kmeans_file, 'w'))
 
@@ -174,36 +189,44 @@ else:
     logger.info('Calculating ivectors for evaluation set')
     analyze.extract_i_vectors(gmm_eval_features_path, ivec_dir, ivec_machine)
 
+if os.path.exists(eval_ivector_score_file):
+    logger.info('Score file for ivector analysis already exists in '+eval_ivector_score_file+'. No new score file is generated.')
+else:
+    logger.info('Generating score file for ivector analysis')
+    files = analyze.recursive_find_all_files(ivec_dir, '.hdf5')
+    gen_score_file(files, eval_ivector_score_file)
+    logger.info('Score file generated to: ' + eval_ivector_score_file)
 
-#Load all ivec file names to array
-#Compare files to each other and write to score file
-files = analyze.recursive_find_all_files(ivec_dir, '.hdf5')
-f = open(eval_score_file, 'w')
+gmm_machine = None
 
-for f1 in files:
-    for f2 in files:
-        f1_loaded = bob.io.load(f1)
-        f2_loaded = bob.io.load(f2)
-        score = utils.cosine_score(f1_loaded, f2_loaded)
-        f.write('\"'+f1[len(ivec_dir)+1:] + '\",\"' + f2[len(ivec_dir)+1:] + '\",\"' + str(score) + '\"\n')
+if os.path.isfile(gmm_machine_file):
+    logger.info('GMM Machine file exists (' + gmm_machine_file + '). Loading MAP GMM Machine from file instead of generating it.')
+    gmm_machine_hdf5 = bob.io.HDF5File(gmm_machine_file)
+    gmm_machine = bob.machine.GMMMachine(gmm_machine_hdf5)
+    logger.info('MAP GMM Machine file loaded')
+else:
+    logger.info('Generating MAP GMM Machine.')
+    gmm_machine = analyze.gen_MAP_GMM_machine(ubm, train_features, num_gauss, dim, map_gmm_relevance, map_gmm_convergence_threshold, map_gmm_max_iterations)
+    logger.info('TV matrix generated.')
+    #save the TV matrix
+    logger.info('Saving MAP GMM Machine to ' + gmm_machine_file)
+    gmm_machine.save(bob.io.HDF5File(gmm_machine_file, 'w'))
 
-f.close()
+logger.info('Run evaluation set through map gmm machine.')
+if os.path.exists(map_gmm_dir):
+    logger.info('map gmm path already exists.')
+else:
+    logger.info('Calculating map gmm for evaluation set')
+    analyze.map_gmm_machine_analysis(gmm_eval_features_path, map_gmm_dir, gmm_machine)
 
 
-# gmm_machine = None
-#
-# if os.path.isfile(gmm_machine_file):
-#     logger.info('GMM Machine file exists (' + gmm_machine_file + '). Loading MAP GMM Machine from file instead of generating it.')
-#     gmm_machine_hdf5 = bob.io.HDF5File(gmm_machine_file)
-#     gmm_machine = bob.machine.bob.machine.GMMMachine(gmm_machine_hdf5)
-#     logger.info('MAP GMM Machine file loaded')
-# else:
-#     logger.info('Generating MAP GMM Machine.')
-#     gmm_machine = analyze.gen_MAP_GMM_machine(ubm, train_features, dim, map_gmm_relevance, map_gmm_convergence_threshold, map_gmm_max_iterations)
-#     logger.info('TV matrix generated.')
-#     #save the TV matrix
-#     logger.info('Saving MAP GMM Machine to ' + gmm_machine_file)
-#     gmm_machine.save(bob.io.HDF5File(gmm_machine_file, 'w'))
+if os.path.exists(eval_map_gmm_score_file):
+    logger.info('Score file for map gmm analysis already exists in '+eval_map_gmm_score_file+'. No new score file is generated.')
+else:
+    logger.info('Generating score file for map_gmm analysis')
+    files = analyze.recursive_find_all_files(ivec_dir, '.hdf5')
+    gen_score_file(files, eval_map_gmm_score_file)
+    logger.info('Score file generated to: ' + eval_map_gmm_score_file)
 
 #Generate map adaptation trainer
 #gmm_machine = analyze.gen_MAP_GMM_machine(ubm, train_features, dim, map_gmm_relevance, map_gmm_convergence_threshold, map_gmm_max_iterations)

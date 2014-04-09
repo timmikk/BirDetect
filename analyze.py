@@ -5,32 +5,32 @@ import scipy
 import utils
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 current_dir = os.getcwd()
 
-base_path = ''
-snd_path = os.path.join(base_path, 'snd')
-train_sounds_path = os.path.join(snd_path, 'train')
-eval_sounds_path = os.path.join(snd_path, 'eval')
+# base_path = ''
+# snd_path = os.path.join(base_path, 'snd')
+# train_sounds_path = os.path.join(snd_path, 'train')
+# eval_sounds_path = os.path.join(snd_path, 'eval')
+#
+# analyze_path = os.path.join(base_path, 'analyze')
+#
+# train_features_path = os.path.join(analyze_path, 'train')
+# eval_features_path = os.path.join(analyze_path, 'eval')
+#
+# mfcc_path = os.path.join(analyze_path, 'mfcc')
+# kmeans_file = os.path.join(analyze_path, 'kmeans.hdf5')
+# ubm_file = os.path.join(analyze_path, 'ubm.hdf5')
+# gmm_stats_path = os.path.join(analyze_path, 'gmm_stats')
+# tv_file = os.path.join(analyze_path, 'tv.hdf5')
+# ivec_dir = os.path.join(analyze_path, 'ivectors')
 
-analyze_path = os.path.join(base_path, 'analyze')
-
-train_features_path = os.path.join(analyze_path, 'train')
-eval_features_path = os.path.join(analyze_path, 'eval')
-
-mfcc_path = os.path.join(analyze_path, 'mfcc')
-kmeans_file = os.path.join(analyze_path, 'kmeans.hdf5')
-ubm_file = os.path.join(analyze_path, 'ubm.hdf5')
-gmm_stats_path = os.path.join(analyze_path, 'gmm_stats')
-tv_file = os.path.join(analyze_path, 'tv.hdf5')
-ivec_dir = os.path.join(analyze_path, 'ivectors')
-
-num_gauss = 16
-
-ubm_convergence_threshold = 1e-4
-ubm_max_iterations = 10
+# num_gauss = 16
+#
+# ubm_convergence_threshold = 1e-4
+# ubm_max_iterations = 10
 
 # Feature extraction
 def feature_extraction(audio_file):
@@ -197,7 +197,7 @@ def recursive_load_mfcc_files(path):
     #
     # return train_features
 
-def train_k_means(train_features, num_gauss=16):
+def train_kmeans(train_features, num_gauss=16):
 
     dim = train_features.shape[1]
     kmeans_trainer = bob.trainer.KMeansTrainer()
@@ -327,6 +327,40 @@ def extract_i_vectors(gmm_stats_path, ivec_dir, ivec_machine):
                 new_path = os.path.join(gmm_stats_path, f)
                 new_dest_dir = os.path.join(ivec_dir, f)
                 extract_i_vectors(new_path, new_dest_dir, ivec_machine)
+
+            else:
+                logger.info('Unknown file type: ' + str(f_location))
+                continue
+
+def map_gmm_machine_analysis(gmm_stats_path, map_gmm_dir, map_gmm_machine):
+    for f in os.listdir(gmm_stats_path):
+            f_location = os.path.join(gmm_stats_path, f)
+            logger.debug('running map gmm machine for: ' + f_location)
+
+            if utils.is_hdf5_file(f_location):
+
+                stripped_filename = utils.strip_filename(f)
+                dest_file = os.path.join(map_gmm_dir, stripped_filename)
+                dest_file += '.hdf5'
+
+                utils.ensure_dir(map_gmm_dir)
+
+                # load the GMM stats file
+                gmm_stats = bob.machine.GMMStats(bob.io.HDF5File(f_location))
+
+                # extract i-vector
+                response = map_gmm_machine.forward(gmm_stats)
+
+                # save them!
+                bob.io.save(response, dest_file)
+
+                print 'savin map gmm response ' + dest_file
+
+
+            elif os.path.isdir(f_location):
+                new_path = os.path.join(gmm_stats_path, f)
+                new_dest_dir = os.path.join(map_gmm_dir, f)
+                map_gmm_machine_analysis(new_path, new_dest_dir, map_gmm_machine)
 
             else:
                 logger.info('Unknown file type: ' + str(f_location))

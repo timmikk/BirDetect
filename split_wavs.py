@@ -16,10 +16,12 @@ import bob
 import sys
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 FIGNUM = 0
+
+matplotlib.rcParams.update({'font.size': 5})
 
 def show_spectogram(wav_file):
     #wavfile = sys.argv[1]
@@ -689,7 +691,9 @@ def recursively_split_wav_files(path, dest, invalid_dest):
             continue
 
 
-matplotlib.rcParams.update({'font.size': 5})
+
+#recursively_split_wav_files(orig_sound_path, sound_path, invalid_snd_path)
+#recursively_plot_wav_files(orig_sound_path, split_plot_path)
 
 #show_energy_plots(sys.argv[1:])
 
