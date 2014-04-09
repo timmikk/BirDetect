@@ -16,12 +16,32 @@ import bob
 import sys
 import logging
 
-#logging.basicConfig(level=logging.DEBUG)
+import argparse
+
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 FIGNUM = 0
 
 matplotlib.rcParams.update({'font.size': 5})
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('source', help='original sound path')
+parser.add_argument('destination', help='split wavs')
+parser.add_argument('--invalid_path', help='Invalid parts of wav files', default='invalis_splits')
+parser.add_argument('--plots_path', help='Plots', default='plots')
+
+args = parser.parse_args()
+
+src_abs_path = os.path.abspath(args.source)
+dest_abs_path = os.path.abspath(args.destination)
+invalid_splits_path = os.path.abspath(args.invalid_path)
+plots_path = os.path.abspath(args.plots_path)
+
+logger.info('src_abs_path: ' + src_abs_path)
+logger.info('dest_abs_path: ' + dest_abs_path)
+logger.info('invalid_splits_path: ' + invalid_splits_path)
+logger.info('plots_path: ' + plots_path)
 
 def show_spectogram(wav_file):
     #wavfile = sys.argv[1]
@@ -692,8 +712,8 @@ def recursively_split_wav_files(path, dest, invalid_dest):
 
 
 
-#recursively_split_wav_files(orig_sound_path, sound_path, invalid_snd_path)
-#recursively_plot_wav_files(orig_sound_path, split_plot_path)
+recursively_split_wav_files(src_abs_path, dest_abs_path, invalid_splits_path)
+recursively_plot_wav_files(src_abs_path, plots_path)
 
 #show_energy_plots(sys.argv[1:])
 

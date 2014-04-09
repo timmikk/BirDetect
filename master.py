@@ -10,6 +10,13 @@ __author__ = 'Timo Mikkilä'
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+import argparse
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+#parser.add_argument('--split', help='Run wav splitter', action="store_true")
+
+args = parser.parse_args()
+
 base_path = os.getcwd()
 print 'base path: ' + base_path
 
@@ -76,16 +83,14 @@ def gen_score_file(files, score_file):
 #EXECUTE!!
 
 #Split audio files
+# if args.split:
+#     if os.path.exists(sound_path):
+#         logger.info('No splitting is done as split destination directory ('+ sound_path +') already exists')
+#     else:
+#         logger.info('Splitting wavs from ' + orig_sound_path +' to ' + sound_path)
+#         split_wavs.recursively_split_wav_files(orig_sound_path, sound_path, invalid_snd_path)
+#         split_wavs.recursively_plot_wav_files(orig_sound_path, split_plot_path)
 
-if not os.path.exists(sound_path):
-    split_wavs.recursively_split_wav_files(orig_sound_path, sound_path, invalid_snd_path)
-
-#Make plots of splits for later analysis
-#TODO: integrate to splitting
-#TODO:Set proper font size for plotting
-
-if not os.path.exists(split_plot_path):
-    split_wavs.recursively_plot_wav_files(orig_sound_path, split_plot_path)
 
 ##RUN ANALYSIS##
 
