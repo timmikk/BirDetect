@@ -114,6 +114,18 @@ def recursive_load(path, file_validator, loader):
 
     return data
 
+def test_array_for_nan(array):
+    for v in array:
+        if type(v) is numpy.ndarray:
+            test_array_for_nan(v)
+        else:
+            if numpy.isnan(v).any():
+                print 'Contains NAN: ' + str(v)
+
+            if numpy.isinf(v).any():
+               print 'Contains INF: ' + str(v)
+
+
 def recursive_test_for_nan(path):
 
     for f in os.listdir(path):
@@ -224,7 +236,7 @@ def train_ubm_gmm_with_features(kmeans, train_features, num_gauss, convergence_t
     return ubm
 
 def recursive_find_all_files(path, extension):
-    logger.info('Recursively list all files from ' + path + ' with extension ' + extension)
+    logger.debug('Recursively list all files from ' + path + ' with extension ' + extension)
     files = []
     for f in os.listdir(path):
         f_location = os.path.join(path, f)
@@ -241,7 +253,7 @@ def recursive_find_all_files(path, extension):
             logger.debug('Wrong filetype: ' + str(f_location))
             continue
 
-    logger.info('Found ' + str(len(files)) + ' files')
+    logger.debug('Found ' + str(len(files)) + ' files')
     return files
 
 def compute_gmm_sufficient_statistics(ubm, num_gauss, dim, src_dir, dest_dir):
