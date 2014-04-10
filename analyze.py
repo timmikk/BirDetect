@@ -343,9 +343,9 @@ def extract_i_vectors(gmm_stats_path, ivec_dir, ivec_machine):
                 logger.info('Unknown file type: ' + str(f_location))
                 continue
 
-def map_gmm_machine_analysis(gmm_stats_path, map_gmm_dir, map_gmm_machine):
-    for f in os.listdir(gmm_stats_path):
-            f_location = os.path.join(gmm_stats_path, f)
+def map_gmm_machine_analysis(features_path, map_gmm_dir, map_gmm_machine):
+    for f in os.listdir(features_path):
+            f_location = os.path.join(features_path, f)
             logger.debug('running map gmm machine for: ' + f_location)
 
             if utils.is_hdf5_file(f_location):
@@ -357,11 +357,12 @@ def map_gmm_machine_analysis(gmm_stats_path, map_gmm_dir, map_gmm_machine):
                 utils.ensure_dir(map_gmm_dir)
 
                 # load the GMM stats file
-                gmm_stats = bob.machine.GMMStats(bob.io.HDF5File(f_location))
+                #gmm_stats = bob.machine.GMMStats(bob.io.HDF5File(f_location))
+                feature = bob.io.load(f_location)
 
                 # extract i-vector
-                logger.debug('gmm_stats type ' + str(type(gmm_stats)))
-                response = map_gmm_machine.forward(gmm_stats)
+                logger.debug('gmm_stats type ' + str(type(feature)))
+                response = map_gmm_machine.forward(feature)
 
                 # save them!
                 bob.io.save(response, dest_file)
@@ -370,7 +371,7 @@ def map_gmm_machine_analysis(gmm_stats_path, map_gmm_dir, map_gmm_machine):
 
 
             elif os.path.isdir(f_location):
-                new_path = os.path.join(gmm_stats_path, f)
+                new_path = os.path.join(features_path, f)
                 new_dest_dir = os.path.join(map_gmm_dir, f)
                 map_gmm_machine_analysis(new_path, new_dest_dir, map_gmm_machine)
 

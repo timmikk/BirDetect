@@ -160,10 +160,10 @@ logger.info('ubm_file=' + ubm_file)
 gmm_features_path = os.path.join(dest_path, 'gmm_stats')
 logger.info('gmm_features_path=' + gmm_features_path)
 
-gmm_train_features_path = os.path.join(gmm_features_path, 'train')
-logger.info('gmm_train_features_path=' + gmm_train_features_path)
-gmm_eval_features_path = os.path.join(gmm_features_path, 'eval')
-logger.info('gmm_eval_features_path=' + gmm_eval_features_path)
+gmm_stats_train_path = os.path.join(gmm_features_path, 'train')
+logger.info('gmm_train_features_path=' + gmm_stats_train_path)
+gmm_stats_eval_path = os.path.join(gmm_features_path, 'eval')
+logger.info('gmm_eval_features_path=' + gmm_stats_eval_path)
 
 ivec_machine_file = os.path.join(dest_path, 'tv.hdf5')
 logger.info('ivec_machine_file=' + ivec_machine_file)
@@ -301,9 +301,9 @@ def evaluate_score_file(score_file, roc_file, det_file):
     logger.info('Found ' + str(len(negatives)) + ' negatives and ' + str(len(positives)) + ' positives')
 
     eer_rocch = bob.measure.eer_rocch(negatives, positives)
-    logger.info('eer_rocch=' + eer_rocch)
+    logger.info('eer_rocch=' + str(eer_rocch))
     eer_threshold = bob.measure.eer_threshold(negatives, positives)
-    logger.info('eer_threshold=' + eer_threshold)
+    logger.info('eer_threshold=' + str(eer_threshold))
 
     logger.info('Generating ROC curve to ' + roc_file)
     evaluate.gen_roc_curve(negatives, positives, roc_file)
@@ -398,21 +398,21 @@ logger.info('Compute GMM sufficient statistics for both training and eval sets')
 dim = train_features.shape[1]
 logger.info('Train features dimension = ' + str(dim))
 
-if os.path.exists(gmm_train_features_path):
-    logger.info('GMM train stats path exists ('+ gmm_train_features_path +') Skipping... ')
+if os.path.exists(gmm_stats_train_path):
+    logger.info('GMM train stats path exists ('+ gmm_stats_train_path +') Skipping... ')
 else:
     logger.info('Calculating GMM train stats')
-    analyze.compute_gmm_sufficient_statistics(ubm, gmm_stat_num_gauss, gmm_stat_dim, train_features_path, gmm_train_features_path)
+    analyze.compute_gmm_sufficient_statistics(ubm, gmm_stat_num_gauss, gmm_stat_dim, train_features_path, gmm_stats_train_path)
 
-if os.path.exists(gmm_eval_features_path):
-    logger.info('GMM evaluation stats path exists ('+ gmm_eval_features_path +') Skipping... ')
+if os.path.exists(gmm_stats_eval_path):
+    logger.info('GMM evaluation stats path exists ('+ gmm_stats_eval_path +') Skipping... ')
 else:
     logger.info('Calculating GMM evaluation stats')
-    analyze.compute_gmm_sufficient_statistics(ubm, num_gauss, dim, train_features_path, gmm_eval_features_path)
+    analyze.compute_gmm_sufficient_statistics(ubm, num_gauss, dim, train_features_path, gmm_stats_eval_path)
 
 #9. Training TV and Sigma matrices
 logger.info('Training ivector machine')
-gmm_train_stats = analyze.recursive_load_gmm_stats(gmm_train_features_path)
+gmm_train_stats = analyze.recursive_load_gmm_stats(gmm_stats_train_path)
 
 ivec_machine = None
 
@@ -436,7 +436,7 @@ if os.path.exists(ivec_dir):
     logger.info('Ivectors  for evaluation set found so no ivectors are calculated.')
 else:
     logger.info('Calculating ivectors for evaluation set')
-    analyze.extract_i_vectors(gmm_eval_features_path, ivec_dir, ivec_machine)
+    analyze.extract_i_vectors(gmm_stats_eval_path, ivec_dir, ivec_machine)
 
 logger.info('Generate score file for ivector comparisons')
 if os.path.exists(eval_ivector_score_file):
@@ -464,35 +464,30 @@ else:
     logger.info('Saving MAP GMM Machine to ' + gmm_machine_file)
     gmm_machine.save(bob.io.HDF5File(gmm_machine_file, 'w'))
 
-logger.info('Run evaluation set through map gmm machine.')
-if os.path.exists(map_gmm_dir):
-    logger.info('map gmm path already exists.')
-else:
-    logger.info('Calculating map gmm for evaluation set')
-    analyze.map_gmm_machine_analysis(gmm_eval_features_path, map_gmm_dir, gmm_machine)
-
-logger.info('Generate score file for gmm comparisons')
-
-if os.path.exists(eval_map_gmm_score_file):
-    logger.info('Score file for map gmm analysis already exists in '+eval_map_gmm_score_file+'. No new score file is generated.')
-else:
-    logger.info('Generating score file for map_gmm analysis')
-    files = analyze.recursive_find_all_files(ivec_dir, '.hdf5')
-    gen_score_file(files, eval_map_gmm_score_file)
-    logger.info('Score file generated to: ' + eval_map_gmm_score_file)
-
-#Generate map adaptation trainer
-#gmm_machine = analyze.gen_MAP_GMM_machine(ubm, train_features, dim, map_gmm_relevance, map_gmm_convergence_threshold, map_gmm_max_iterations)
-#save map adaptation trainer
-#gmm_machine.save(bob.io.HDF5File(gmm_machine_file, 'w'))
+# logger.info('Run evaluation set through map gmm machine.')
+# if os.path.exists(map_gmm_dir):
+#     logger.info('map gmm path already exists.')
+# else:
+#     logger.info('Calculating map gmm for evaluation set')
+#     analyze.map_gmm_machine_analysis(eval_features_path, map_gmm_dir, gmm_machine)
+#
+# logger.info('Generate score file for gmm comparisons')
+#
+# if os.path.exists(eval_map_gmm_score_file):
+#     logger.info('Score file for map gmm analysis already exists in '+eval_map_gmm_score_file+'. No new score file is generated.')
+# else:
+#     logger.info('Generating score file for map_gmm analysis')
+#     files = analyze.recursive_find_all_files(ivec_dir, '.hdf5')
+#     gen_score_file(files, eval_map_gmm_score_file)
+#     logger.info('Score file generated to: ' + eval_map_gmm_score_file)
 
 
 #EVALUATE RESULTS
 logger.info('Evaluating results')
 logger.info('Evaluating ivector results')
 evaluate_score_file(eval_ivector_score_file,test_roc_eval_ivec_file, test_det_eval_ivec_file)
-logger.info('Evaluating map adapted gmm results')
-evaluate_score_file(eval_map_gmm_score_file, test_roc_eval_map_gmm_file, test_det_eval_map_gmm_file)
+# logger.info('Evaluating map adapted gmm results')
+# evaluate_score_file(eval_map_gmm_score_file, test_roc_eval_map_gmm_file, test_det_eval_map_gmm_file)
 
 total_end_time = time.clock()
 
