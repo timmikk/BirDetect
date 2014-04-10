@@ -217,14 +217,14 @@ logger.info('mfcc_pre=' + str(mfcc_pre))
 logger.info('mfcc_mel=' + str(mfcc_mel))
 
 #Kmeans machine parameters
-kmeans_num_gauss= 16
+kmeans_num_gauss= num_gauss
 kmeans_dim= 19
 logger.info('Kmeans machine parameters:')
 logger.info('kmeans_num_gauss=' + str(kmeans_num_gauss))
 logger.info('kmeans_dim=' + str(kmeans_dim))
 
 #GMM stats parameters
-gmm_stat_num_gauss = 16
+gmm_stat_num_gauss = num_gauss
 gmm_stat_dim = 19
 logger.info('GMM stats parameters:')
 logger.info('gmm_stat_num_gauss=' + str(gmm_stat_num_gauss))
@@ -254,13 +254,13 @@ logger.info('map_gmm_convergence_threshold=' + str(map_gmm_convergence_threshold
 logger.info('map_gmm_max_iterations=' + str(map_gmm_max_iterations))
 
 #Parameters for map adapted gmm machine
-gmm_adapted_num_gauss = 16
+gmm_adapted_num_gauss = num_gauss
 gmm_adapted_dim = 19
 logger.info('Map adapted gmm machine parameters:')
 logger.info('gmm_adapted_num_gauss=' + str(gmm_adapted_num_gauss))
 logger.info('gmm_adapted_dim=' + str(gmm_adapted_dim))
 
-ubm_gmm_num_gauss = 16
+ubm_gmm_num_gauss = num_gauss
 ubm_gmm_dim = 19
 ubm_convergence_threshold = 1e-4
 ubm_max_iterations = 10
