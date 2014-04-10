@@ -33,17 +33,17 @@ current_dir = os.getcwd()
 # ubm_max_iterations = 10
 
 # Feature extraction
-def feature_extraction(audio_file):
+def feature_extraction(audio_file, wl=20, ws=10, nf=24, nceps=19, fmin=0., fmax=4000., d_w=2, pre=0.97, mel=True):
   # Parameters used to extract MFCC (These can be defined in a separate configuration file)
-  wl = 20 # The window length in milliseconds
-  ws = 10 # The window shift of the in milliseconds
-  nf = 24 # The number of filter bands
-  nceps = 19 # The number of cepstral coefficients
-  fmin = 0. # The minimal frequency of the filter bank
-  fmax = 4000. # The maximal frequency of the filter bank
-  d_w = 2 # The delta value used to compute 1st and 2nd derivatives
-  pre = 0.97 # The coefficient used for the pre-emphasis
-  mel = True # Tell whether MFCC or LFCC are extracted
+  # wl = 20 # The window length in milliseconds
+  # ws = 10 # The window shift of the in milliseconds
+  # nf = 24 # The number of filter bands
+  # nceps = 19 # The number of cepstral coefficients
+  # fmin = 0. # The minimal frequency of the filter bank
+  # fmax = 4000. # The maximal frequency of the filter bank
+  # d_w = 2 # The delta value used to compute 1st and 2nd derivatives
+  # pre = 0.97 # The coefficient used for the pre-emphasis
+  # mel = True # Tell whether MFCC or LFCC are extracted
 
   # We could also add 1st and 2nd derivatives by activating their flags!
 
@@ -65,7 +65,7 @@ def feature_extraction(audio_file):
   return mfcc
 
 
-def recursively_extract_features(path, dest_dir):
+def recursively_extract_features(path, dest_dir, wl=20, ws=10, nf=24, nceps=19, fmin=0., fmax=4000., d_w=2, pre = 0.97, mel=True):
     for f in os.listdir(path):
         f_location = os.path.join(path, f)
         if utils.is_wav_file(f_location):
@@ -74,7 +74,7 @@ def recursively_extract_features(path, dest_dir):
             dest_file = os.path.join(dest_dir, stripped_filename)
             dest_file += '.hdf5'
 
-            mfcc = feature_extraction(f_location)
+            mfcc = feature_extraction(f_location, wl, ws, nf, nceps, fmin, fmax, d_w, pre, mel)
             utils.ensure_dir(dest_dir)
 
             bob.io.save(mfcc, dest_file)
@@ -209,17 +209,17 @@ def recursive_load_mfcc_files(path):
     #
     # return train_features
 
-def train_kmeans(train_features, num_gauss=16):
+def train_kmeans_machine(train_features, num_gauss, dim):
 
-    dim = train_features.shape[1]
+    #dim = train_features.shape[1]
     kmeans_trainer = bob.trainer.KMeansTrainer()
     kmeans = bob.machine.KMeansMachine(num_gauss, dim)
     kmeans_trainer.train(kmeans, train_features)
     return kmeans
 
 
-def train_ubm_gmm_with_features(kmeans, train_features, num_gauss, convergence_threshold = 1e-4, max_iterations=10):
-    dim = train_features.shape[1]
+def train_ubm_gmm_with_features(kmeans, train_features, num_gauss, dim, convergence_threshold = 1e-4, max_iterations=10):
+    #dim = train_features.shape[1]
 
     #Create universal background model
     ubm = bob.machine.GMMMachine(num_gauss, dim)
@@ -257,7 +257,6 @@ def recursive_find_all_files(path, extension):
     return files
 
 def compute_gmm_sufficient_statistics(ubm, num_gauss, dim, src_dir, dest_dir):
-
     for f in os.listdir(src_dir):
         f_location = os.path.join(src_dir, f)
         logger.debug('compute_gmm_sufficient_statistics: ' + f_location)
@@ -293,12 +292,12 @@ def load_gmm_file(file):
 def recursive_load_gmm_stats(gmm_stats_path):
     return recursive_load(gmm_stats_path, utils.is_hdf5_file, load_gmm_file)
 
-def train_tv(gmm_train_stats, ubm, iv_dim=None, variance_treshold=1e-5, max_iterations=10, update_sigma=True):
+def gen_ivec_machine(gmm_train_stats, ubm, iv_dim=None, variance_treshold=1e-5, max_iterations=10, update_sigma=True):
     if iv_dim is None:
         iv_dim = len(gmm_train_stats)
     #Creating the i-vector machine
     ivec_machine = bob.machine.IVectorMachine(ubm, iv_dim)
-    ivec_machine.variance_threshold = 1e-5
+    ivec_machine.variance_threshold = variance_treshold
 
     #Train the TV matrix
     ivec_trainer = bob.trainer.IVectorTrainer(update_sigma=update_sigma, max_iterations=max_iterations)
@@ -332,7 +331,7 @@ def extract_i_vectors(gmm_stats_path, ivec_dir, ivec_machine):
 
                 gmm_stats_to_ivec(f_location, dest_file, ivec_machine)
 
-                print 'savin ivec ' + dest_file
+                logger.debug('saving ivec ' + dest_file)
 
 
             elif os.path.isdir(f_location):
@@ -361,12 +360,13 @@ def map_gmm_machine_analysis(gmm_stats_path, map_gmm_dir, map_gmm_machine):
                 gmm_stats = bob.machine.GMMStats(bob.io.HDF5File(f_location))
 
                 # extract i-vector
+                logger.debug('gmm_stats type ' + str(type(gmm_stats)))
                 response = map_gmm_machine.forward(gmm_stats)
 
                 # save them!
                 bob.io.save(response, dest_file)
 
-                print 'savin map gmm response ' + dest_file
+                logger.debug('saving map gmm response ' + dest_file)
 
 
             elif os.path.isdir(f_location):

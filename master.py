@@ -6,32 +6,13 @@ import logging
 import time
 import analyze, utils, evaluate
 import logging.config
-import json
 import argparse
 
 __author__ = 'Timo Mikkilä'
 
 #logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-def setup_logging(dest_path, default_path='logging.json', default_level=logging.INFO, env_key='LOG_CFG'):
-    """Setup logging configuration
-
-    """
-    path = default_path
-    value = os.getenv(env_key, None)
-    if value:
-        path = value
-    if os.path.exists(path):
-        with open(path, 'rt') as f:
-            config = json.load(f.read())
-        logging.config.dictConfig(config)
-    else:
-        logging.basicConfig(level=default_level)
-
-
-
+#logger.setLevel(logging.DEBUG)
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--num_gauss', help='Number of gaussian used in calculations', default=16, type=int)
@@ -41,6 +22,88 @@ parser.add_argument('--dest_path', help='Location where all data is written to',
 args = parser.parse_args()
 
 dest_path = os.path.abspath(args.dest_path)
+
+log_file_locator = lambda *x: os.path.join(dest_path, *x)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        }
+    },
+
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "INFO",
+            "formatter": "simple",
+            "stream": "ext://sys.stdout"
+        },
+
+        "info_file_handler": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": "INFO",
+            "formatter": "simple",
+            "filename": log_file_locator('info.log'),
+            "maxBytes": "10485760",
+            "backupCount": "20",
+            "encoding": "utf8"
+        },
+
+        "error_file_handler": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": "ERROR",
+            "formatter": "simple",
+            "filename": log_file_locator('errors.log'),
+            "maxBytes": "10485760",
+            "backupCount": "20",
+            "encoding": "utf8"
+        },
+
+        "debug_file_handler": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": "DEBUG",
+            "formatter": "simple",
+            "filename": log_file_locator('debug.log'),
+            "maxBytes": "10485760",
+            "backupCount": "20",
+            "encoding": "utf8"
+        }
+    },
+
+    "loggers": {
+        "": {
+            "level": "DEBUG",
+            "handlers": ["console"],
+            "propagate": "no"
+        }
+    },
+
+    "root": {
+        "level": "DEBUG",
+        "handlers": ["console", "info_file_handler", "error_file_handler", "debug_file_handler"]
+    }
+}
+
+
+
+def setup_logging(dest_path, logging_json, default_level=logging.INFO, env_key='LOG_CFG'):
+    """Setup logging configuration
+
+    """
+
+    if logging_json is not None:
+        #config = json.loads(logging_json)
+        logging.config.dictConfig(logging_json)
+    else:
+        logging.basicConfig(level=default_level)
+
+
+
+
+
 #setup_logging(dest_path)
 #logger = logging.getLogger(__name__)
 #
@@ -48,21 +111,24 @@ dest_path = os.path.abspath(args.dest_path)
 info_log_file = os.path.join(dest_path, 'info.log')
 debug_log_file = os.path.join(dest_path, 'debug.log')
 # create a file handler
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-info_handler = logging.FileHandler(info_log_file)
-info_handler.setLevel(logging.INFO)
-debug_handler = logging.FileHandler(debug_log_file)
-debug_handler.setLevel(logging.DEBUG)
-# create a logging format
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(formatter)
-info_handler.setFormatter(formatter)
-debug_handler.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(console_handler)
-logger.addHandler(info_handler)
-logger.addHandler(debug_handler)
+# console_handler = logging.StreamHandler()
+# console_handler.setLevel(logging.INFO)
+# info_handler = logging.FileHandler(info_log_file)
+# info_handler.setLevel(logging.INFO)
+# debug_handler = logging.FileHandler(debug_log_file)
+# debug_handler.setLevel(logging.DEBUG)
+# # create a logging format
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# console_handler.setFormatter(formatter)
+# info_handler.setFormatter(formatter)
+# debug_handler.setFormatter(formatter)
+# # add the handlers to the logger
+# logger.addHandler(console_handler)
+# logger.addHandler(info_handler)
+# logger.addHandler(debug_handler)
+
+log_conf_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'logging.json')
+setup_logging(dest_path, LOGGING)
 
 
 sound_path = os.path.abspath(args.snd_path)
@@ -114,28 +180,103 @@ logger.info('eval_ivector_score_file=' + eval_ivector_score_file)
 eval_map_gmm_score_file = os.path.join(dest_path, 'score-map_gmm-eval.txt')
 logger.info('eval_map_gmm_score_file=' + eval_map_gmm_score_file)
 
-test_roc_eval_map_gmm_file = os.path.join(dest_path, 'roc.png')
+test_roc_eval_map_gmm_file = os.path.join(dest_path, 'gmm_adapted_roc.png')
 logger.info('test_roc_eval_map_gmm_file=' + test_roc_eval_map_gmm_file)
-test_det_eval_map_gmm_file = os.path.join(dest_path, 'det.png')
+test_det_eval_map_gmm_file = os.path.join(dest_path, 'gmm_adapted_det.png')
 logger.info('test_det_eval_map_gmm_file=' + test_det_eval_map_gmm_file)
 
-map_gmm_relevance = 4
-map_gmm_convergence_threshold = 1e-5
-map_gmm_max_iterations = 200
+test_roc_eval_ivec_file = os.path.join(dest_path, 'ivec_roc.png')
+logger.info('test_roc_eval_ivec_file=' + test_roc_eval_ivec_file)
+test_det_eval_ivec_file = os.path.join(dest_path, 'ivec_det.png')
+logger.info('test_det_eval_ivec_file=' + test_det_eval_ivec_file)
 
-
+logger.info('Other parameters:')
 num_gauss = args.num_gauss #defaults to 16 #19# 128 512
 logger.info('num_gauss=' + str(num_gauss))
 
+#MFCC feature extraction parameters
+mfcc_wl=20 #The window length in milliseconds
+mfcc_ws=10 # The window shift of the in milliseconds
+mfcc_nf=24 # The number of filter bands
+mfcc_nceps=19 # The number of cepstral coefficients
+mfcc_fmin=0. # The minimal frequency of the filter bank
+mfcc_fmax=4000. # The maximal frequency of the filter bank
+mfcc_d_w=2 # The delta value used to compute 1st and 2nd derivatives
+mfcc_pre=0.97 # The coefficient used for the pre-emphasis
+mfcc_mel=True # Tell whether MFCC or LFCC are extracted
+
+logger.info('MFCC feature extraction parameters:')
+logger.info('mfcc_wl=' + str(mfcc_wl))
+logger.info('mfcc_ws=' + str(mfcc_ws))
+logger.info('mfcc_nf=' + str(mfcc_nf))
+logger.info('mfcc_nceps=' + str(mfcc_nceps))
+logger.info('mfcc_fmin=' + str(mfcc_fmin))
+logger.info('mfcc_fmax=' + str(mfcc_fmax))
+logger.info('mfcc_d_w=' + str(mfcc_d_w))
+logger.info('mfcc_pre=' + str(mfcc_pre))
+logger.info('mfcc_mel=' + str(mfcc_mel))
+
+#Kmeans machine parameters
+kmeans_num_gauss= 16
+kmeans_dim= 19
+logger.info('Kmeans machine parameters:')
+logger.info('kmeans_num_gauss=' + str(kmeans_num_gauss))
+logger.info('kmeans_dim=' + str(kmeans_dim))
+
+#GMM stats parameters
+gmm_stat_num_gauss = 16
+gmm_stat_dim = 19
+logger.info('GMM stats parameters:')
+logger.info('gmm_stat_num_gauss=' + str(gmm_stat_num_gauss))
+logger.info('gmm_stat_dim=' + str(gmm_stat_dim))
+
+#Ivector machine parameters
+ivec_machine_variance_treshold=1e-5
+ivec_machine_dim = 19
+logger.info('Ivector machine parameters:')
+logger.info('ivec_machine_dim=' + str(ivec_machine_dim))
+logger.info('ivec_machine_variance_treshold=' + str(ivec_machine_variance_treshold))
+
+#Ivector trainer parameters
+ivec_trainer_max_iterations=10
+ivec_trainer_update_sigma=True
+logger.info('Ivector trainer parameters:')
+logger.info('ivec_trainer_max_iterations=' + str(ivec_trainer_max_iterations))
+logger.info('ivec_trainer_update_sigma=' + str(ivec_trainer_update_sigma))
+
+#Parameters for map gmm trainer
+map_gmm_relevance_factor = 4
+map_gmm_convergence_threshold = 1e-5
+map_gmm_max_iterations = 200
+logger.info('Map gmm trainer parameters:')
+logger.info('map_gmm_relevance_factor=' + str(map_gmm_relevance_factor))
+logger.info('map_gmm_convergence_threshold=' + str(map_gmm_convergence_threshold))
+logger.info('map_gmm_max_iterations=' + str(map_gmm_max_iterations))
+
+#Parameters for map adapted gmm machine
+gmm_adapted_num_gauss = 16
+gmm_adapted_dim = 19
+logger.info('Map adapted gmm machine parameters:')
+logger.info('gmm_adapted_num_gauss=' + str(gmm_adapted_num_gauss))
+logger.info('gmm_adapted_dim=' + str(gmm_adapted_dim))
+
+ubm_gmm_num_gauss = 16
+ubm_gmm_dim = 19
 ubm_convergence_threshold = 1e-4
 ubm_max_iterations = 10
+logger.info('UBM parameters:')
+logger.info('ubm_gmm_num_gauss=' + str(ubm_gmm_num_gauss))
+logger.info('ubm_gmm_dim=' + str(ubm_gmm_dim))
+logger.info('ubm_convergence_threshold=' + str(ubm_convergence_threshold))
+logger.info('ubm_max_iterations=' + str(ubm_max_iterations))
+
 
 
 
 def gen_score_file(files, score_file):
     #Load all ivec file names to array
     #Compare files to each other and write to score file
-
+    logger.debug('Generating score file to ' + score_file)
     f = open(score_file, 'w')
 
     for f1 in files:
@@ -151,6 +292,25 @@ def gen_score_file(files, score_file):
 
     f.close()
 
+def evaluate_score_file(score_file, roc_file, det_file):
+    logger.info('Evaluating ' + score_file)
+
+    logger.info('Finding negatives and positives from score file')
+    negatives, positives = evaluate.parse_scores_from_file(score_file)
+
+    logger.info('Found ' + str(len(negatives)) + ' negatives and ' + str(len(positives)) + ' positives')
+
+    eer_rocch = bob.measure.eer_rocch(negatives, positives)
+    logger.info('eer_rocch=' + eer_rocch)
+    eer_threshold = bob.measure.eer_threshold(negatives, positives)
+    logger.info('eer_threshold=' + eer_threshold)
+
+    logger.info('Generating ROC curve to ' + roc_file)
+    evaluate.gen_roc_curve(negatives, positives, roc_file)
+
+    logger.info('Generating DET curve to ' + det_file)
+    evaluate.gen_det_curve(negatives, positives, det_file)
+
 total_start_time = time.clock()
 #EXECUTE!!
 
@@ -165,6 +325,7 @@ total_start_time = time.clock()
 
 
 ##RUN ANALYSIS##
+logger.info('STARTING PROCESSING')
 logger.info('Extracting features')
 
 #1. Extract and save features from training files
@@ -173,7 +334,7 @@ if os.path.exists(train_features_path):
 else:
     logger.info('Extracting mfcc features from train data')
     logger.debug('From ' + train_sounds_path + ' to ' + train_features_path)
-    analyze.recursively_extract_features(train_sounds_path, train_features_path)
+    analyze.recursively_extract_features(train_sounds_path, train_features_path, mfcc_wl, mfcc_ws, mfcc_nf, mfcc_nceps, mfcc_fmin, mfcc_fmax, mfcc_d_w, mfcc_pre, mfcc_mel)
 
 #2. Extract and save features from evaluation files
 if os.path.exists(eval_features_path):
@@ -181,7 +342,7 @@ if os.path.exists(eval_features_path):
 else:
     logger.info('Extracting mfcc features from evaluation data')
     logger.debug('From ' + eval_sounds_path + ' to ' + eval_features_path)
-    analyze.recursively_extract_features(eval_sounds_path, eval_features_path)
+    analyze.recursively_extract_features(eval_sounds_path, eval_features_path, mfcc_wl, mfcc_ws, mfcc_nf, mfcc_nceps, mfcc_fmin, mfcc_fmax, mfcc_d_w, mfcc_pre, mfcc_mel)
 
 #3. Read training features to array
 logger.info('Load train features')
@@ -205,11 +366,11 @@ if os.path.isfile(kmeans_file):
     kmeans = bob.machine.KMeansMachine(kmeans_hdf5)
     logger.info('K-Means file loaded')
 else:
-    kmeans = analyze.train_kmeans(train_features, num_gauss)
+    kmeans = analyze.train_kmeans_machine(train_features, kmeans_num_gauss, kmeans_dim)
     logger.info('save K-Means to file: ' + kmeans_file)
     kmeans.save(bob.io.HDF5File(kmeans_file, 'w'))
 
-analyze.test_array_for_nan(kmeans.means)
+#analyze.test_array_for_nan(kmeans.means)
 #6. Create the universal background model
 
 
@@ -226,7 +387,7 @@ if os.path.isfile(ubm_file):
     logger.info('UBM file loaded')
 else:
     logger.info('No UBM file found (' + ubm_file + '). New UBM is generated.')
-    ubm = analyze.train_ubm_gmm_with_features(kmeans, train_features, num_gauss, ubm_convergence_threshold, ubm_max_iterations)
+    ubm = analyze.train_ubm_gmm_with_features(kmeans, train_features, ubm_gmm_num_gauss, ubm_gmm_dim, ubm_convergence_threshold, ubm_max_iterations)
 #Save ubm
     logger.info('Save UBM to file: ' + ubm_file)
     ubm.save(bob.io.HDF5File(ubm_file, "w"))
@@ -235,12 +396,13 @@ else:
 logger.info('Compute GMM sufficient statistics for both training and eval sets')
 #8. Compute GMM sufficient statistics for both training and eval sets
 dim = train_features.shape[1]
+logger.info('Train features dimension = ' + str(dim))
 
 if os.path.exists(gmm_train_features_path):
     logger.info('GMM train stats path exists ('+ gmm_train_features_path +') Skipping... ')
 else:
     logger.info('Calculating GMM train stats')
-    analyze.compute_gmm_sufficient_statistics(ubm, num_gauss, dim, train_features_path, gmm_train_features_path)
+    analyze.compute_gmm_sufficient_statistics(ubm, gmm_stat_num_gauss, gmm_stat_dim, train_features_path, gmm_train_features_path)
 
 if os.path.exists(gmm_eval_features_path):
     logger.info('GMM evaluation stats path exists ('+ gmm_eval_features_path +') Skipping... ')
@@ -249,22 +411,22 @@ else:
     analyze.compute_gmm_sufficient_statistics(ubm, num_gauss, dim, train_features_path, gmm_eval_features_path)
 
 #9. Training TV and Sigma matrices
-logger.info('Training TV and Sigma matrices')
+logger.info('Training ivector machine')
 gmm_train_stats = analyze.recursive_load_gmm_stats(gmm_train_features_path)
 
 ivec_machine = None
 
 if os.path.isfile(ivec_machine_file):
-    logger.info('TV matrix file exists (' + ivec_machine_file + '). No new TV matrix is generated.')
+    logger.info('Ivector machine file exists (' + ivec_machine_file + '). No new ivector machine is generated.')
     tv_hdf5 = bob.io.HDF5File(ivec_machine_file)
     ivec_machine = bob.machine.IVectorMachine(tv_hdf5)
-    logger.info('TV matrix file loaded')
+    logger.info('Ivector machine loaded')
 else:
-    logger.info('Generating TV matrix.')
-    ivec_machine = analyze.train_tv(gmm_train_stats, ubm)
-    logger.info('TV matrix generated.')
+    logger.info('Generating ivector machine.')
+    ivec_machine = analyze.gen_ivec_machine(gmm_train_stats, ubm, ivec_machine_dim, ivec_machine_variance_treshold, ivec_trainer_max_iterations, ivec_trainer_update_sigma)
+    logger.info('Ivector machine generated.')
     #save the TV matrix
-    logger.info('Saving TV matrix to ' + ivec_machine_file)
+    logger.info('Saving ivector machine to ' + ivec_machine_file)
     ivec_machine.save(bob.io.HDF5File(ivec_machine_file, 'w'))
 
 #10. Extract i-vectors of the eval set..."
@@ -296,7 +458,7 @@ if os.path.isfile(gmm_machine_file):
     logger.info('MAP GMM Machine file loaded')
 else:
     logger.info('Generating MAP GMM Machine.')
-    gmm_machine = analyze.gen_MAP_GMM_machine(ubm, train_features, num_gauss, dim, map_gmm_relevance, map_gmm_convergence_threshold, map_gmm_max_iterations)
+    gmm_machine = analyze.gen_MAP_GMM_machine(ubm, train_features, gmm_adapted_num_gauss, gmm_adapted_dim, map_gmm_relevance_factor, map_gmm_convergence_threshold, map_gmm_max_iterations)
     logger.info('TV matrix generated.')
     #save the TV matrix
     logger.info('Saving MAP GMM Machine to ' + gmm_machine_file)
@@ -327,16 +489,10 @@ else:
 
 #EVALUATE RESULTS
 logger.info('Evaluating results')
-logger.info('Finding negatives and positives from score file')
-negatives, positives = evaluate.parse_scores_from_file(eval_map_gmm_score_file)
-logger.info('Found ' + str(len(negatives)) + ' negatives and ' + str(len(positives)) + ' positives')
-
-logger.info('Generating ROC curve to ' + test_roc_eval_map_gmm_file)
-evaluate.gen_roc_curve(negatives, positives, test_roc_eval_map_gmm_file)
-
-logger.info('Generating DET curve to ' + test_det_eval_map_gmm_file)
-evaluate.gen_det_curve(negatives, positives, test_det_eval_map_gmm_file)
-
+logger.info('Evaluating ivector results')
+evaluate_score_file(eval_ivector_score_file,test_roc_eval_ivec_file, test_det_eval_ivec_file)
+logger.info('Evaluating map adapted gmm results')
+evaluate_score_file(eval_map_gmm_score_file, test_roc_eval_map_gmm_file, test_det_eval_map_gmm_file)
 
 total_end_time = time.clock()
 
