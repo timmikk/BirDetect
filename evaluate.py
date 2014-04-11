@@ -86,7 +86,7 @@ def gen_roc_curve(negatives, positives, roc_curve_file, npoints=100):
     pyplot.savefig(roc_curve_file)
 
 def gen_det_curve(negatives, positives, det_curve_file, npoints=100):
-    bob.measure.plot.det(negatives, positives, npoints, color=(0,0,0), linestyle='-', label='test')
+    bob.measure.plot.det(negatives, positives, npoints, color=(0,0,0), linestyle='-', label='DET')
     bob.measure.plot.det_axis([1, 99, 1, 99])
     #bob.measure.plot.det_axis([0.01, 40, 0.01, 40])
     pyplot.xlabel('FRR (%)')

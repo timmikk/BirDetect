@@ -143,6 +143,8 @@ logger.info('eval_sounds_path=' + eval_sounds_path)
 
 logger.info('dest_path=' + dest_path)
 
+eval_log_file = os.path.join(dest_path, 'eval.txt')
+
 features_path = os.path.join(dest_path, 'features')
 logger.info('features_path=' + features_path)
 
@@ -191,6 +193,7 @@ logger.info('test_roc_eval_ivec_file=' + test_roc_eval_ivec_file)
 test_det_eval_ivec_file = os.path.join(dest_path, 'ivec_det.png')
 logger.info('test_det_eval_ivec_file=' + test_det_eval_ivec_file)
 
+
 logger.info('Other parameters:')
 num_gauss = args.num_gauss #defaults to 16 #19# 128 512
 logger.info('num_gauss=' + str(num_gauss))
@@ -226,7 +229,7 @@ logger.info('kmeans_dim=' + str(kmeans_dim))
 
 #GMM stats parameters
 gmm_stat_num_gauss = num_gauss
-gmm_stat_dim = 20
+gmm_stat_dim = 19
 logger.info('GMM stats parameters:')
 logger.info('gmm_stat_num_gauss=' + str(gmm_stat_num_gauss))
 logger.info('gmm_stat_dim=' + str(gmm_stat_dim))
@@ -272,7 +275,43 @@ logger.info('ubm_convergence_threshold=' + str(ubm_convergence_threshold))
 logger.info('ubm_max_iterations=' + str(ubm_max_iterations))
 
 
+def print_evaluation_log_file(filename, ):
+    with open(filename, "w") as f:
+        f.write('Parameters used')
+        f.write('\nkmeans_num_gauss=' + str(kmeans_num_gauss))
+        f.write('\nkmeans_dim=' + str(kmeans_dim))
 
+        #GMM stats parameters
+        f.write('\n\nGMM stats parameters:')
+        f.write('\ngmm_stat_num_gauss=' + str(gmm_stat_num_gauss))
+        f.write('\ngmm_stat_dim=' + str(gmm_stat_dim))
+
+        #Ivector machine parameters
+        f.write('\n\nIvector machine parameters:')
+        f.write('\nivec_machine_dim=' + str(ivec_machine_dim))
+        f.write('\nivec_machine_variance_treshold=' + str(ivec_machine_variance_treshold))
+
+        #Ivector trainer parameters
+        f.write('\n\nIvector trainer parameters:')
+        f.write('\nivec_trainer_max_iterations=' + str(ivec_trainer_max_iterations))
+        f.write('\nivec_trainer_update_sigma=' + str(ivec_trainer_update_sigma))
+
+        #Parameters for map gmm trainer
+        f.write('\n\nMap gmm trainer parameters:')
+        f.write('\nmap_gmm_relevance_factor=' + str(map_gmm_relevance_factor))
+        f.write('\nmap_gmm_convergence_threshold=' + str(map_gmm_convergence_threshold))
+        f.write('\nmap_gmm_max_iterations=' + str(map_gmm_max_iterations))
+
+        #Parameters for map adapted gmm machine
+        f.write('\n\nMap adapted gmm machine parameters:')
+        f.write('\ngmm_adapted_num_gauss=' + str(gmm_adapted_num_gauss))
+        f.write('\ngmm_adapted_dim=' + str(gmm_adapted_dim))
+
+        f.write('\n\nUBM parameters:')
+        f.write('\nubm_gmm_num_gauss=' + str(ubm_gmm_num_gauss))
+        f.write('\nubm_gmm_dim=' + str(ubm_gmm_dim))
+        f.write('\nubm_convergence_threshold=' + str(ubm_convergence_threshold))
+        f.write('\nubm_max_iterations=' + str(ubm_max_iterations))
 
 def gen_score_file(files, score_file):
     #Load all ivec file names to array
@@ -299,12 +338,51 @@ def evaluate_score_file(score_file, roc_file, det_file):
     logger.info('Finding negatives and positives from score file')
     negatives, positives = evaluate.parse_scores_from_file(score_file)
 
-    logger.info('Found ' + str(len(negatives)) + ' negatives and ' + str(len(positives)) + ' positives')
+    num_negative = len(negatives)
+    num_positives = len(positives)
+    logger.info('Found ' + str(num_negative) + ' negatives and ' + str(num_positives) + ' positives')
 
-    eer_rocch = bob.measure.eer_rocch(negatives, positives)
-    logger.info('eer_rocch=' + str(eer_rocch))
+    # eer_rocch = bob.measure.eer_rocch(negatives, positives)
+    # logger.info('eer_rocch=' + str(eer_rocch))
+    # FAR_eer_rocch, FRR_eer_rocch = bob.measure.farfrr(negatives, positives, eer_rocch)
+    # logger.info('FAR_eer_rocch=' + str(FAR_eer_rocch))
+    # logger.info('FRR_eer_rocch=' + str(FRR_eer_rocch))
+    # correct_negatives_eer_rocch = bob.measure.correctly_classified_negatives(negatives)
+
     eer_threshold = bob.measure.eer_threshold(negatives, positives)
     logger.info('eer_threshold=' + str(eer_threshold))
+    FAR_eer_threshold, FRR_eer_threshold = bob.measure.farfrr(negatives, positives, eer_threshold)
+    logger.info('FAR_eer_threshold=' + str(FAR_eer_threshold))
+    logger.info('FRR_eer_threshold=' + str(FRR_eer_threshold))
+    correct_negatives_FAR_eer_threshold = bob.measure.correctly_classified_negatives(negatives, FAR_eer_threshold).sum()
+    correct_positives_FRR_eer_threshold = bob.measure.correctly_classified_positives(positives, FRR_eer_threshold).sum()
+
+    # min_hter_treshold = bob.measure.min_hter_threshold(negatives, positives)
+    # logger.info('min_hter_treshold=' + str(min_hter_treshold))
+    # FAR_min_hter_treshold, FRR_min_hter_treshold = bob.measure.farfrr(negatives, positives, min_hter_treshold)
+    # logger.info('FAR_min_hter_treshold=' + str(FAR_min_hter_treshold))
+    # logger.info('FRR_min_hter_treshold=' + str(FRR_min_hter_treshold))
+    # correct_negatives_min_hter_treshold = bob.measure.correctly_classified_negatives(negatives, min_hter_treshold)
+    # correct_positives_min_hter_treshold = bob.measure.correctly_classified_positives(positives, min_hter_treshold)
+
+
+    print_evaluation_log_file(eval_log_file)
+    with open(eval_log_file, "a") as f:
+        f.write('\n\nEvaluation')
+        f.write('\nNegatives: ' + str(num_negative))
+        f.write('\nPositives: ' + str(num_positives))
+        f.write('\nEER treshold:' + str(eer_threshold))
+        f.write('\nFAR: ' + str(FAR_eer_threshold) + ' (' + str(correct_negatives_FAR_eer_threshold) + '/' +str(num_negative)+')')
+        f.write('\nFRR: ' + str(FRR_eer_threshold) + ' (' + str(correct_positives_FRR_eer_threshold) + '/' +str(num_positives)+')')
+
+
+        # f.write('\nMin HTER treshold:' + str(min_hter_treshold))
+        # f.write('FAR: ' + str(FAR_min_hter_treshold))
+        # f.write('FRR: ' + str(FRR_min_hter_treshold))
+        # f.write('Correctly classified negatives: ' + str(correct_negatives_min_hter_treshold))
+        # f.write('Correctly classified positives: ' + str(correct_positives_min_hter_treshold))
+
+
 
     logger.info('Generating ROC curve to ' + roc_file)
     evaluate.gen_roc_curve(negatives, positives, roc_file)
