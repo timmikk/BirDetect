@@ -7,6 +7,7 @@ import time
 import analyze, utils, evaluate
 import logging.config
 import argparse
+from matplotlib import pyplot
 
 __author__ = 'Timo Mikkilä'
 
@@ -225,7 +226,7 @@ logger.info('kmeans_dim=' + str(kmeans_dim))
 
 #GMM stats parameters
 gmm_stat_num_gauss = num_gauss
-gmm_stat_dim = 19
+gmm_stat_dim = 20
 logger.info('GMM stats parameters:')
 logger.info('gmm_stat_num_gauss=' + str(gmm_stat_num_gauss))
 logger.info('gmm_stat_dim=' + str(gmm_stat_dim))
@@ -480,7 +481,6 @@ else:
 #     files = analyze.recursive_find_all_files(ivec_dir, '.hdf5')
 #     gen_score_file(files, eval_map_gmm_score_file)
 #     logger.info('Score file generated to: ' + eval_map_gmm_score_file)
-
 
 #EVALUATE RESULTS
 logger.info('Evaluating results')

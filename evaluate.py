@@ -5,6 +5,10 @@ import argparse
 import logging
 import bob
 import numpy
+import matplotlib
+# Force matplotlib to not use any Xwindows backend.
+matplotlib.use('Agg')
+
 from matplotlib import pyplot
 
 
@@ -83,7 +87,8 @@ def gen_roc_curve(negatives, positives, roc_curve_file, npoints=100):
 
 def gen_det_curve(negatives, positives, det_curve_file, npoints=100):
     bob.measure.plot.det(negatives, positives, npoints, color=(0,0,0), linestyle='-', label='test')
-    bob.measure.plot.det_axis([0.01, 40, 0.01, 40])
+    bob.measure.plot.det_axis([1, 99, 1, 99])
+    #bob.measure.plot.det_axis([0.01, 40, 0.01, 40])
     pyplot.xlabel('FRR (%)')
     pyplot.ylabel('FAR (%)')
     pyplot.grid(True)
