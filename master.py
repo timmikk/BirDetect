@@ -7,6 +7,7 @@ import time
 import analyze, utils, evaluate
 import logging.config
 import argparse
+import yaml
 from matplotlib import pyplot
 
 __author__ = 'Timo Mikkilä'
@@ -15,16 +16,98 @@ __author__ = 'Timo Mikkilä'
 logger = logging.getLogger(__name__)
 #logger.setLevel(logging.DEBUG)
 
+parameters = {}
+
+def load_parameters(param_file):
+    if not os.path.isfile(param_file):
+        logger.error('Error no such parameter file:' + param_file)
+        exit(128)
+    f=open(param_file)
+    global parameters
+    new_params = yaml.load(f)
+    parameters = dict(parameters.items() + new_params.items())
+
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--num_gauss', help='Number of gaussian used in calculations', default=16, type=int)
 parser.add_argument('--snd_path', help='Location of wav files. Must contain train and eval folders', default='snd')
 parser.add_argument('--dest_path', help='Location where all data is written to', default='dest')
+parser.add_argument('--params_file', help='Parameter file')
 
 args = parser.parse_args()
 
+
 dest_path = os.path.abspath(args.dest_path)
 
+sound_path = os.path.abspath(args.snd_path)
+logger.info('sound_path=' + sound_path)
+
+train_sounds_path = os.path.join(sound_path, 'train')
+logger.info('train_sounds_path=' + train_sounds_path)
+eval_sounds_path = os.path.join(sound_path, 'eval')
+logger.info('eval_sounds_path=' + eval_sounds_path)
+
+
+logger.info('dest_path=' + dest_path)
+
+eval_log_file = os.path.join(dest_path, 'eval.txt')
+
+features_path = os.path.join(dest_path, 'features')
+logger.info('features_path=' + features_path)
+
+train_features_path = os.path.join(features_path, 'train')
+logger.info('train_features_path=' + train_features_path)
+
+eval_features_path = os.path.join(features_path, 'eval')
+logger.info('eval_features_path=' + eval_features_path)
+
+mfcc_path = os.path.join(dest_path, 'mfcc')
+logger.info('mfcc_path=' + mfcc_path)
+kmeans_file = os.path.join(dest_path, 'kmeans.hdf5')
+logger.info('kmeans_file=' + kmeans_file)
+ubm_file = os.path.join(dest_path, 'ubm.hdf5')
+logger.info('ubm_file=' + ubm_file)
+gmm_features_path = os.path.join(dest_path, 'gmm_stats')
+logger.info('gmm_features_path=' + gmm_features_path)
+
+gmm_stats_train_path = os.path.join(gmm_features_path, 'train')
+logger.info('gmm_train_features_path=' + gmm_stats_train_path)
+gmm_stats_eval_path = os.path.join(gmm_features_path, 'eval')
+logger.info('gmm_eval_features_path=' + gmm_stats_eval_path)
+
+ivec_machine_file = os.path.join(dest_path, 'tv.hdf5')
+logger.info('ivec_machine_file=' + ivec_machine_file)
+ivec_dir = os.path.join(dest_path, 'ivectors')
+logger.info('ivec_dir=' + ivec_dir)
+
+gmm_machine_file = os.path.join(dest_path, 'gmm_machine.hdf5')
+logger.info('gmm_machine_file=' + gmm_machine_file)
+map_gmm_dir = os.path.join(dest_path, 'map_gmm')
+logger.info('map_gmm_dir=' + map_gmm_dir)
+
+eval_ivector_score_file = os.path.join(dest_path, 'score-ivector-eval.txt')
+logger.info('eval_ivector_score_file=' + eval_ivector_score_file)
+eval_map_gmm_score_file = os.path.join(dest_path, 'score-map_gmm-eval.txt')
+logger.info('eval_map_gmm_score_file=' + eval_map_gmm_score_file)
+
+test_roc_eval_map_gmm_file = os.path.join(dest_path, 'gmm_adapted_roc.png')
+logger.info('test_roc_eval_map_gmm_file=' + test_roc_eval_map_gmm_file)
+test_det_eval_map_gmm_file = os.path.join(dest_path, 'gmm_adapted_det.png')
+logger.info('test_det_eval_map_gmm_file=' + test_det_eval_map_gmm_file)
+
+test_roc_eval_ivec_file = os.path.join(dest_path, 'ivec_roc.png')
+logger.info('test_roc_eval_ivec_file=' + test_roc_eval_ivec_file)
+test_det_eval_ivec_file = os.path.join(dest_path, 'ivec_det.png')
+logger.info('test_det_eval_ivec_file=' + test_det_eval_ivec_file)
+
+conf_default_file = os.path.join(os.path.dirname(__file__), 'default.cfg')
+
 log_file_locator = lambda *x: os.path.join(dest_path, *x)
+
+#Load default parameters
+load_parameters(conf_default_file)
+
+if args.params_file is not None:
+    load_parameters(args.params_file)
 
 LOGGING = {
     "version": 1,
@@ -103,12 +186,6 @@ def setup_logging(dest_path, logging_json, default_level=logging.INFO, env_key='
 
 
 
-
-
-#setup_logging(dest_path)
-#logger = logging.getLogger(__name__)
-#
-
 info_log_file = os.path.join(dest_path, 'info.log')
 debug_log_file = os.path.join(dest_path, 'debug.log')
 # create a file handler
@@ -131,187 +208,135 @@ debug_log_file = os.path.join(dest_path, 'debug.log')
 log_conf_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'logging.json')
 setup_logging(dest_path, LOGGING)
 
-
-sound_path = os.path.abspath(args.snd_path)
-logger.info('sound_path=' + sound_path)
-
-train_sounds_path = os.path.join(sound_path, 'train')
-logger.info('train_sounds_path=' + train_sounds_path)
-eval_sounds_path = os.path.join(sound_path, 'eval')
-logger.info('eval_sounds_path=' + eval_sounds_path)
-
-
-logger.info('dest_path=' + dest_path)
-
-eval_log_file = os.path.join(dest_path, 'eval.txt')
-
-features_path = os.path.join(dest_path, 'features')
-logger.info('features_path=' + features_path)
-
-train_features_path = os.path.join(features_path, 'train')
-logger.info('train_features_path=' + train_features_path)
-
-eval_features_path = os.path.join(features_path, 'eval')
-logger.info('eval_features_path=' + eval_features_path)
-
-mfcc_path = os.path.join(dest_path, 'mfcc')
-logger.info('mfcc_path=' + mfcc_path)
-kmeans_file = os.path.join(dest_path, 'kmeans.hdf5')
-logger.info('kmeans_file=' + kmeans_file)
-ubm_file = os.path.join(dest_path, 'ubm.hdf5')
-logger.info('ubm_file=' + ubm_file)
-gmm_features_path = os.path.join(dest_path, 'gmm_stats')
-logger.info('gmm_features_path=' + gmm_features_path)
-
-gmm_stats_train_path = os.path.join(gmm_features_path, 'train')
-logger.info('gmm_train_features_path=' + gmm_stats_train_path)
-gmm_stats_eval_path = os.path.join(gmm_features_path, 'eval')
-logger.info('gmm_eval_features_path=' + gmm_stats_eval_path)
-
-ivec_machine_file = os.path.join(dest_path, 'tv.hdf5')
-logger.info('ivec_machine_file=' + ivec_machine_file)
-ivec_dir = os.path.join(dest_path, 'ivectors')
-logger.info('ivec_dir=' + ivec_dir)
-
-gmm_machine_file = os.path.join(dest_path, 'gmm_machine.hdf5')
-logger.info('gmm_machine_file=' + gmm_machine_file)
-map_gmm_dir = os.path.join(dest_path, 'map_gmm')
-logger.info('map_gmm_dir=' + map_gmm_dir)
-
-eval_ivector_score_file = os.path.join(dest_path, 'score-ivector-eval.txt')
-logger.info('eval_ivector_score_file=' + eval_ivector_score_file)
-eval_map_gmm_score_file = os.path.join(dest_path, 'score-map_gmm-eval.txt')
-logger.info('eval_map_gmm_score_file=' + eval_map_gmm_score_file)
-
-test_roc_eval_map_gmm_file = os.path.join(dest_path, 'gmm_adapted_roc.png')
-logger.info('test_roc_eval_map_gmm_file=' + test_roc_eval_map_gmm_file)
-test_det_eval_map_gmm_file = os.path.join(dest_path, 'gmm_adapted_det.png')
-logger.info('test_det_eval_map_gmm_file=' + test_det_eval_map_gmm_file)
-
-test_roc_eval_ivec_file = os.path.join(dest_path, 'ivec_roc.png')
-logger.info('test_roc_eval_ivec_file=' + test_roc_eval_ivec_file)
-test_det_eval_ivec_file = os.path.join(dest_path, 'ivec_det.png')
-logger.info('test_det_eval_ivec_file=' + test_det_eval_ivec_file)
-
+logger.info('Loading parameters from ' + conf_default_file)
+logger.info('Parameters loaded: ' + str(parameters))
 
 logger.info('Other parameters:')
 num_gauss = args.num_gauss #defaults to 16 #19# 128 512
 logger.info('num_gauss=' + str(num_gauss))
 
+parameters['kmeans_num_gauss'] = num_gauss
+parameters['gmm_stat_num_gauss'] = num_gauss
+parameters['gmm_adapted_num_gauss'] = num_gauss
+
+
 #MFCC feature extraction parameters
-mfcc_wl=20 #The window length in milliseconds
-mfcc_ws=10 # The window shift of the in milliseconds
-mfcc_nf=24 # The number of filter bands
-mfcc_nceps=19 # The number of cepstral coefficients
-mfcc_fmin=0. # The minimal frequency of the filter bank
-mfcc_fmax=4000. # The maximal frequency of the filter bank
-mfcc_d_w=2 # The delta value used to compute 1st and 2nd derivatives
-mfcc_pre=0.97 # The coefficient used for the pre-emphasis
-mfcc_mel=True # Tell whether MFCC or LFCC are extracted
-
-logger.info('MFCC feature extraction parameters:')
-logger.info('mfcc_wl=' + str(mfcc_wl))
-logger.info('mfcc_ws=' + str(mfcc_ws))
-logger.info('mfcc_nf=' + str(mfcc_nf))
-logger.info('mfcc_nceps=' + str(mfcc_nceps))
-logger.info('mfcc_fmin=' + str(mfcc_fmin))
-logger.info('mfcc_fmax=' + str(mfcc_fmax))
-logger.info('mfcc_d_w=' + str(mfcc_d_w))
-logger.info('mfcc_pre=' + str(mfcc_pre))
-logger.info('mfcc_mel=' + str(mfcc_mel))
-
-#Kmeans machine parameters
-kmeans_num_gauss= num_gauss
-kmeans_dim= 19
-logger.info('Kmeans machine parameters:')
-logger.info('kmeans_num_gauss=' + str(kmeans_num_gauss))
-logger.info('kmeans_dim=' + str(kmeans_dim))
-
-#GMM stats parameters
-gmm_stat_num_gauss = num_gauss
-gmm_stat_dim = 19
-logger.info('GMM stats parameters:')
-logger.info('gmm_stat_num_gauss=' + str(gmm_stat_num_gauss))
-logger.info('gmm_stat_dim=' + str(gmm_stat_dim))
-
-#Ivector machine parameters
-ivec_machine_variance_treshold=1e-5
-ivec_machine_dim = 19
-logger.info('Ivector machine parameters:')
-logger.info('ivec_machine_dim=' + str(ivec_machine_dim))
-logger.info('ivec_machine_variance_treshold=' + str(ivec_machine_variance_treshold))
-
-#Ivector trainer parameters
-ivec_trainer_max_iterations=10
-ivec_trainer_update_sigma=True
-logger.info('Ivector trainer parameters:')
-logger.info('ivec_trainer_max_iterations=' + str(ivec_trainer_max_iterations))
-logger.info('ivec_trainer_update_sigma=' + str(ivec_trainer_update_sigma))
-
-#Parameters for map gmm trainer
-map_gmm_relevance_factor = 4
-map_gmm_convergence_threshold = 1e-5
-map_gmm_max_iterations = 200
-logger.info('Map gmm trainer parameters:')
-logger.info('map_gmm_relevance_factor=' + str(map_gmm_relevance_factor))
-logger.info('map_gmm_convergence_threshold=' + str(map_gmm_convergence_threshold))
-logger.info('map_gmm_max_iterations=' + str(map_gmm_max_iterations))
-
-#Parameters for map adapted gmm machine
-gmm_adapted_num_gauss = num_gauss
-gmm_adapted_dim = 19
-logger.info('Map adapted gmm machine parameters:')
-logger.info('gmm_adapted_num_gauss=' + str(gmm_adapted_num_gauss))
-logger.info('gmm_adapted_dim=' + str(gmm_adapted_dim))
-
-ubm_gmm_num_gauss = num_gauss
-ubm_gmm_dim = 19
-ubm_convergence_threshold = 1e-4
-ubm_max_iterations = 10
-logger.info('UBM parameters:')
-logger.info('ubm_gmm_num_gauss=' + str(ubm_gmm_num_gauss))
-logger.info('ubm_gmm_dim=' + str(ubm_gmm_dim))
-logger.info('ubm_convergence_threshold=' + str(ubm_convergence_threshold))
-logger.info('ubm_max_iterations=' + str(ubm_max_iterations))
+# parameters['mfcc_wl']=20 #The window length in milliseconds
+# parameters['mfcc_ws']=10 # The window shift of the in milliseconds
+# parameters['mfcc_nf']=24 # The number of filter bands
+# parameters['mfcc_nceps']=19 # The number of cepstral coefficients
+# parameters['mfcc_fmin']=0. # The minimal frequency of the filter bank
+# parameters['mfcc_fmax']=4000. # The maximal frequency of the filter bank
+# parameters['mfcc_d_w']=2 # The delta value used to compute 1st and 2nd derivatives
+# parameters['mfcc_pre']=0.97 # The coefficient used for the pre-emphasis
+# parameters['mfcc_mel']=True # Tell whether MFCC or LFCC are extracted
+#
+# logger.info('MFCC feature extraction parameters:')
+# logger.info('parameters[\'mfcc_wl\']=' + str(parameters['mfcc_wl']))
+# logger.info('parameters[\'mfcc_ws\']=' + str(parameters['mfcc_ws']))
+# logger.info('parameters[\'mfcc_nf\']=' + str(parameters['mfcc_nf']))
+# logger.info('parameters[\'mfcc_nceps\']=' + str(parameters['mfcc_nceps']))
+# logger.info('parameters[\'mfcc_fmin\']=' + str(parameters['mfcc_fmin']))
+# logger.info('parameters[\'mfcc_fmax\']=' + str(parameters['mfcc_fmax']))
+# logger.info('parameters[\'mfcc_d_w\']=' + str(parameters['mfcc_d_w']))
+# logger.info('parameters[\'mfcc_pre\']=' + str(parameters['mfcc_pre']))
+# logger.info('parameters[\'mfcc_mel\']=' + str(parameters['mfcc_mel']))
+#
+# #Kmeans machine parameters
+# # parameters['kmeans_num_gauss']= num_gauss
+# # parameters['kmeans_dim']= 19
+# logger.info('Kmeans machine parameters:')
+# logger.info('parameters['kmeans_num_gauss']=' + str(parameters['kmeans_num_gauss']))
+# logger.info('parameters['kmeans_dim']=' + str(parameters['kmeans_dim']))
+#
+# #GMM stats parameters
+# # parameters['gmm_stat_num_gauss'] = num_gauss
+# # parameters['gmm_stat_dim'] = 19
+# logger.info('GMM stats parameters:')
+# logger.info('parameters['gmm_stat_num_gauss']=' + str(parameters['gmm_stat_num_gauss']))
+# logger.info('parameters['gmm_stat_dim']=' + str(parameters['gmm_stat_dim']))
+#
+# #Ivector machine parameters
+# # parameters['ivec_machine_variance_treshold']=1e-5
+# # parameters['ivec_machine_dim'] = 19
+# logger.info('Ivector machine parameters:')
+# logger.info('parameters['ivec_machine_dim']=' + str(parameters['ivec_machine_dim']))
+# logger.info('parameters['ivec_machine_variance_treshold']=' + str(parameters['parameters'][ivec_machine_variance_treshold))
+#
+# # #Ivector trainer parameters
+# # parameters['ivec_trainer_max_iterations']=10
+# # parameters['ivec_trainer_update_sigma']=True
+# logger.info('Ivector trainer parameters:')
+# logger.info('parameters['ivec_trainer_max_iterations']=' + str(parameters['ivec_trainer_max_iterations']))
+# logger.info('parameters['ivec_trainer_update_sigma']=' + str(parameters['ivec_trainer_update_sigma']))
+#
+# # #Parameters for map gmm trainer
+# # parameters['map_gmm_relevance_factor'] = 4
+# # parameters['map_gmm_convergence_threshold'] = 1e-5
+# # parameters['map_gmm_max_iterations'] = 200
+# logger.info('Map gmm trainer parameters:')
+# logger.info('parameters['map_gmm_relevance_factor']=' + str(parameters['map_gmm_relevance_factor']))
+# logger.info('parameters['map_gmm_convergence_threshold']=' + str(parameters['map_gmm_convergence_threshold']))
+# logger.info('parameters['map_gmm_max_iterations']=' + str(parameters['map_gmm_max_iterations']))
+#
+# # #Parameters for map adapted gmm machine
+# # parameters['gmm_adapted_num_gauss'] = num_gauss
+# # parameters['gmm_adapted_dim'] = 19
+# logger.info('Map adapted gmm machine parameters:')
+# logger.info('parameters['gmm_adapted_num_gauss']=' + str(parameters['gmm_adapted_num_gauss']))
+# logger.info('parameters['gmm_adapted_dim']=' + str(parameters['gmm_adapted_dim']))
+#
+# # parameters['ubm_gmm_num_gauss'] = num_gauss
+# # parameters['ubm_gmm_dim'] = 19
+# # parameters['ubm_convergence_threshold'] = 1e-4
+# # parameters['ubm_max_iterations'] = 10
+# logger.info('UBM parameters:')
+# logger.info('parameters['ubm_gmm_num_gauss']=' + str(parameters['ubm_gmm_num_gauss']))
+# logger.info('parameters['ubm_gmm_dim']=' + str(parameters['ubm_gmm_dim']))
+# logger.info('parameters['ubm_convergence_threshold']=' + str(parameters['ubm_convergence_threshold']))
+# logger.info('parameters['ubm_max_iterations']=' + str(parameters['ubm_max_iterations']))
 
 
 def print_evaluation_log_file(filename, ):
     with open(filename, "w") as f:
-        f.write('Parameters used')
-        f.write('\nkmeans_num_gauss=' + str(kmeans_num_gauss))
-        f.write('\nkmeans_dim=' + str(kmeans_dim))
-
-        #GMM stats parameters
-        f.write('\n\nGMM stats parameters:')
-        f.write('\ngmm_stat_num_gauss=' + str(gmm_stat_num_gauss))
-        f.write('\ngmm_stat_dim=' + str(gmm_stat_dim))
-
-        #Ivector machine parameters
-        f.write('\n\nIvector machine parameters:')
-        f.write('\nivec_machine_dim=' + str(ivec_machine_dim))
-        f.write('\nivec_machine_variance_treshold=' + str(ivec_machine_variance_treshold))
-
-        #Ivector trainer parameters
-        f.write('\n\nIvector trainer parameters:')
-        f.write('\nivec_trainer_max_iterations=' + str(ivec_trainer_max_iterations))
-        f.write('\nivec_trainer_update_sigma=' + str(ivec_trainer_update_sigma))
-
-        #Parameters for map gmm trainer
-        f.write('\n\nMap gmm trainer parameters:')
-        f.write('\nmap_gmm_relevance_factor=' + str(map_gmm_relevance_factor))
-        f.write('\nmap_gmm_convergence_threshold=' + str(map_gmm_convergence_threshold))
-        f.write('\nmap_gmm_max_iterations=' + str(map_gmm_max_iterations))
-
-        #Parameters for map adapted gmm machine
-        f.write('\n\nMap adapted gmm machine parameters:')
-        f.write('\ngmm_adapted_num_gauss=' + str(gmm_adapted_num_gauss))
-        f.write('\ngmm_adapted_dim=' + str(gmm_adapted_dim))
-
-        f.write('\n\nUBM parameters:')
-        f.write('\nubm_gmm_num_gauss=' + str(ubm_gmm_num_gauss))
-        f.write('\nubm_gmm_dim=' + str(ubm_gmm_dim))
-        f.write('\nubm_convergence_threshold=' + str(ubm_convergence_threshold))
-        f.write('\nubm_max_iterations=' + str(ubm_max_iterations))
+        f.write('Parameters used\n')
+        for key in parameters.keys():
+            f.write('' + key + ': ' + str(parameters[key])+'\n')
+        # f.write('Parameters used')
+        # f.write('\nparameters['kmeans_num_gauss']=' + str(parameters['kmeans_num_gauss']))
+        # f.write('\nparameters['kmeans_dim']=' + str(parameters['kmeans_dim']))
+        #
+        # #GMM stats parameters
+        # f.write('\n\nGMM stats parameters:')
+        # f.write('\nparameters['gmm_stat_num_gauss']=' + str(parameters['gmm_stat_num_gauss']))
+        # f.write('\nparameters['gmm_stat_dim']=' + str(parameters['gmm_stat_dim']))
+        #
+        # #Ivector machine parameters
+        # f.write('\n\nIvector machine parameters:')
+        # f.write('\nparameters['ivec_machine_dim']=' + str(parameters['ivec_machine_dim']))
+        # f.write('\nparameters['ivec_machine_variance_treshold']=' + str(parameters['ivec_machine_variance_treshold']))
+        #
+        # #Ivector trainer parameters
+        # f.write('\n\nIvector trainer parameters:')
+        # f.write('\nparameters['ivec_trainer_max_iterations']=' + str(parameters['ivec_trainer_max_iterations']))
+        # f.write('\nparameters['ivec_trainer_update_sigma']=' + str(parameters['ivec_trainer_update_sigma']))
+        #
+        # #Parameters for map gmm trainer
+        # f.write('\n\nMap gmm trainer parameters:')
+        # f.write('\nparameters['map_gmm_relevance_factor']=' + str(parameters['map_gmm_relevance_factor']))
+        # f.write('\nparameters['map_gmm_convergence_threshold']=' + str(parameters['map_gmm_convergence_threshold']))
+        # f.write('\nparameters['map_gmm_max_iterations']=' + str(parameters['map_gmm_max_iterations']))
+        #
+        # #Parameters for map adapted gmm machine
+        # f.write('\n\nMap adapted gmm machine parameters:')
+        # f.write('\nparameters['gmm_adapted_num_gauss']=' + str(parameters['gmm_adapted_num_gauss']))
+        # f.write('\nparameters['gmm_adapted_dim']=' + str(parameters['gmm_adapted_dim']))
+        #
+        # f.write('\n\nUBM parameters:')
+        # f.write('\nparameters['ubm_gmm_num_gauss']=' + str(parameters['ubm_gmm_num_gauss']))
+        # f.write('\nparameters['ubm_gmm_dim']=' + str(parameters['ubm_gmm_dim']))
+        # f.write('\nparameters['ubm_convergence_threshold']=' + str(parameters['ubm_convergence_threshold']))
+        # f.write('\nparameters['ubm_max_iterations']=' + str(parameters['ubm_max_iterations']))
 
 def gen_score_file(files, score_file):
     #Load all ivec file names to array
@@ -413,7 +438,7 @@ if os.path.exists(train_features_path):
 else:
     logger.info('Extracting mfcc features from train data')
     logger.debug('From ' + train_sounds_path + ' to ' + train_features_path)
-    analyze.recursively_extract_features(train_sounds_path, train_features_path, mfcc_wl, mfcc_ws, mfcc_nf, mfcc_nceps, mfcc_fmin, mfcc_fmax, mfcc_d_w, mfcc_pre, mfcc_mel)
+    analyze.recursively_extract_features(train_sounds_path, train_features_path, parameters['mfcc_wl'], parameters['mfcc_ws'], parameters['mfcc_nf'], parameters['mfcc_nceps'], parameters['mfcc_fmin'], parameters['mfcc_fmax'], parameters['mfcc_d_w'], parameters['mfcc_pre'], parameters['mfcc_mel'])
 
 #2. Extract and save features from evaluation files
 if os.path.exists(eval_features_path):
@@ -421,7 +446,7 @@ if os.path.exists(eval_features_path):
 else:
     logger.info('Extracting mfcc features from evaluation data')
     logger.debug('From ' + eval_sounds_path + ' to ' + eval_features_path)
-    analyze.recursively_extract_features(eval_sounds_path, eval_features_path, mfcc_wl, mfcc_ws, mfcc_nf, mfcc_nceps, mfcc_fmin, mfcc_fmax, mfcc_d_w, mfcc_pre, mfcc_mel)
+    analyze.recursively_extract_features(eval_sounds_path, eval_features_path, parameters['mfcc_wl'], parameters['mfcc_ws'], parameters['mfcc_nf'], parameters['mfcc_nceps'], parameters['mfcc_fmin'], parameters['mfcc_fmax'], parameters['mfcc_d_w'], parameters['mfcc_pre'], parameters['mfcc_mel'])
 
 #3. Read training features to array
 logger.info('Load train features')
@@ -445,7 +470,7 @@ if os.path.isfile(kmeans_file):
     kmeans = bob.machine.KMeansMachine(kmeans_hdf5)
     logger.info('K-Means file loaded')
 else:
-    kmeans = analyze.train_kmeans_machine(train_features, kmeans_num_gauss, kmeans_dim)
+    kmeans = analyze.train_kmeans_machine(train_features, parameters['kmeans_num_gauss'], parameters['kmeans_dim'])
     logger.info('save K-Means to file: ' + kmeans_file)
     kmeans.save(bob.io.HDF5File(kmeans_file, 'w'))
 
@@ -466,7 +491,7 @@ if os.path.isfile(ubm_file):
     logger.info('UBM file loaded')
 else:
     logger.info('No UBM file found (' + ubm_file + '). New UBM is generated.')
-    ubm = analyze.train_ubm_gmm_with_features(kmeans, train_features, ubm_gmm_num_gauss, ubm_gmm_dim, ubm_convergence_threshold, ubm_max_iterations)
+    ubm = analyze.train_ubm_gmm_with_features(kmeans, train_features, parameters['ubm_gmm_num_gauss'], parameters['ubm_gmm_dim'], parameters['ubm_convergence_threshold'], parameters['ubm_max_iterations'])
 #Save ubm
     logger.info('Save UBM to file: ' + ubm_file)
     ubm.save(bob.io.HDF5File(ubm_file, "w"))
@@ -481,7 +506,7 @@ if os.path.exists(gmm_stats_train_path):
     logger.info('GMM train stats path exists ('+ gmm_stats_train_path +') Skipping... ')
 else:
     logger.info('Calculating GMM train stats')
-    analyze.compute_gmm_sufficient_statistics(ubm, gmm_stat_num_gauss, gmm_stat_dim, train_features_path, gmm_stats_train_path)
+    analyze.compute_gmm_sufficient_statistics(ubm, parameters['gmm_stat_num_gauss'], parameters['gmm_stat_dim'], train_features_path, gmm_stats_train_path)
 
 if os.path.exists(gmm_stats_eval_path):
     logger.info('GMM evaluation stats path exists ('+ gmm_stats_eval_path +') Skipping... ')
@@ -502,7 +527,7 @@ if os.path.isfile(ivec_machine_file):
     logger.info('Ivector machine loaded')
 else:
     logger.info('Generating ivector machine.')
-    ivec_machine = analyze.gen_ivec_machine(gmm_train_stats, ubm, ivec_machine_dim, ivec_machine_variance_treshold, ivec_trainer_max_iterations, ivec_trainer_update_sigma)
+    ivec_machine = analyze.gen_ivec_machine(gmm_train_stats, ubm, parameters['ivec_machine_dim'], parameters['ivec_machine_variance_treshold'], parameters['ivec_trainer_max_iterations'], parameters['ivec_trainer_update_sigma'])
     logger.info('Ivector machine generated.')
     #save the TV matrix
     logger.info('Saving ivector machine to ' + ivec_machine_file)
@@ -537,7 +562,7 @@ if os.path.isfile(gmm_machine_file):
     logger.info('MAP GMM Machine file loaded')
 else:
     logger.info('Generating MAP GMM Machine.')
-    gmm_machine = analyze.gen_MAP_GMM_machine(ubm, train_features, gmm_adapted_num_gauss, gmm_adapted_dim, map_gmm_relevance_factor, map_gmm_convergence_threshold, map_gmm_max_iterations)
+    gmm_machine = analyze.gen_MAP_GMM_machine(ubm, train_features, parameters['gmm_adapted_num_gauss'], parameters['gmm_adapted_dim'], parameters['map_gmm_relevance_factor'], parameters['map_gmm_convergence_threshold'], parameters['map_gmm_max_iterations'])
     logger.info('TV matrix generated.')
     #save the TV matrix
     logger.info('Saving MAP GMM Machine to ' + gmm_machine_file)
