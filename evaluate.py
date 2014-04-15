@@ -6,6 +6,7 @@ import logging
 import bob
 import numpy
 import matplotlib
+import utils
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use('Agg')
 
@@ -30,8 +31,9 @@ def load_score_file(score_file):
         return None
     file_obj = open(score_file, 'r')
     #reg_exp = '\",?\"?'
-    reg_exp = '^\".*/(?P<name1>[a-zA-Z_]+)[-_\d]*split_[\d]+\.hdf5\",\".*/(?P<name2>[a-zA-Z_]+)[-_\d]*split_[\d]+\.hdf5\",\"(?P<score>[\d\.-e]+)\"'
-    reg_exp = '^\".*/(?P<name1>[a-zA-Z_]+)[-_\d]*split_[\d]+\.hdf5\",\".*/(?P<name2>[a-zA-Z_]+)[-_\d]*split_[\d]+\.hdf5\",\"(?P<score>[^\"]*)\"'
+    reg_exp = '^\"(?P<name1>[^\"]+)\",\"(?P<name2>[^\"]+)\",\"(?P<score>[^\"]+)\"'
+    #reg_exp = '^\".*/(?P<name1>[a-zA-Z_]+)[-_\d]*split_[\d]+\.hdf5\",\".*/(?P<name2>[a-zA-Z_]+)[-_\d]*split_[\d]+\.hdf5\",\"(?P<score>[^\"]*)\"'
+
     prog = re.compile(reg_exp)
 
     for line in file_obj:
@@ -42,10 +44,11 @@ def load_score_file(score_file):
 
         #print matchObj
 
-        name1 = matchObj.group('name1')
-        name2 = matchObj.group('name2')
+        f1 = matchObj.group('name1')
+        f2 = matchObj.group('name2')
         score = float(matchObj.group('score'))
-
+        name1 = utils.get_bird_name_from_file_name(f1)
+        name2 = utils.get_bird_name_from_file_name(f2)
         scores.append((name1, name2, score))
 
         #print 'name1=' + name1 + ', name2=' + name2 + ', score=' + str(score)

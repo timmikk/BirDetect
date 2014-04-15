@@ -215,9 +215,9 @@ logger.info('Other parameters:')
 num_gauss = args.num_gauss #defaults to 16 #19# 128 512
 logger.info('num_gauss=' + str(num_gauss))
 
-parameters['kmeans_num_gauss'] = num_gauss
-parameters['gmm_stat_num_gauss'] = num_gauss
-parameters['gmm_adapted_num_gauss'] = num_gauss
+#parameters['kmeans_num_gauss'] = num_gauss
+#parameters['gmm_stat_num_gauss'] = num_gauss
+#parameters['gmm_adapted_num_gauss'] = num_gauss
 
 
 #MFCC feature extraction parameters
@@ -506,13 +506,13 @@ if os.path.exists(gmm_stats_train_path):
     logger.info('GMM train stats path exists ('+ gmm_stats_train_path +') Skipping... ')
 else:
     logger.info('Calculating GMM train stats')
-    analyze.compute_gmm_sufficient_statistics(ubm, parameters['gmm_stat_num_gauss'], parameters['gmm_stat_dim'], train_features_path, gmm_stats_train_path)
+    analyze.compute_gmm_sufficient_statistics(ubm, train_features_path, gmm_stats_train_path)
 
 if os.path.exists(gmm_stats_eval_path):
     logger.info('GMM evaluation stats path exists ('+ gmm_stats_eval_path +') Skipping... ')
 else:
     logger.info('Calculating GMM evaluation stats')
-    analyze.compute_gmm_sufficient_statistics(ubm, num_gauss, dim, train_features_path, gmm_stats_eval_path)
+    analyze.compute_gmm_sufficient_statistics(ubm, eval_features_path, gmm_stats_eval_path)
 
 #9. Training TV and Sigma matrices
 logger.info('Training ivector machine')
@@ -555,19 +555,19 @@ else:
 logger.info('Train GMM Machine with Map adaptation')
 gmm_machine = None
 
-if os.path.isfile(gmm_machine_file):
-    logger.info('GMM Machine file exists (' + gmm_machine_file + '). Loading MAP GMM Machine from file instead of generating it.')
-    gmm_machine_hdf5 = bob.io.HDF5File(gmm_machine_file)
-    gmm_machine = bob.machine.GMMMachine(gmm_machine_hdf5)
-    logger.info('MAP GMM Machine file loaded')
-else:
-    logger.info('Generating MAP GMM Machine.')
-    gmm_machine = analyze.gen_MAP_GMM_machine(ubm, train_features, parameters['gmm_adapted_num_gauss'], parameters['gmm_adapted_dim'], parameters['map_gmm_relevance_factor'], parameters['map_gmm_convergence_threshold'], parameters['map_gmm_max_iterations'])
-    logger.info('TV matrix generated.')
-    #save the TV matrix
-    logger.info('Saving MAP GMM Machine to ' + gmm_machine_file)
-    gmm_machine.save(bob.io.HDF5File(gmm_machine_file, 'w'))
-
+# if os.path.isfile(gmm_machine_file):
+#     logger.info('GMM Machine file exists (' + gmm_machine_file + '). Loading MAP GMM Machine from file instead of generating it.')
+#     gmm_machine_hdf5 = bob.io.HDF5File(gmm_machine_file)
+#     gmm_machine = bob.machine.GMMMachine(gmm_machine_hdf5)
+#     logger.info('MAP GMM Machine file loaded')
+# else:
+#     logger.info('Generating MAP GMM Machine.')
+#     gmm_machine = analyze.gen_MAP_GMM_machine(ubm, train_features, parameters['gmm_adapted_num_gauss'], parameters['gmm_adapted_dim'], parameters['map_gmm_relevance_factor'], parameters['map_gmm_convergence_threshold'], parameters['map_gmm_max_iterations'])
+#     logger.info('TV matrix generated.')
+#     #save the TV matrix
+#     logger.info('Saving MAP GMM Machine to ' + gmm_machine_file)
+#     gmm_machine.save(bob.io.HDF5File(gmm_machine_file, 'w'))
+#
 # logger.info('Run evaluation set through map gmm machine.')
 # if os.path.exists(map_gmm_dir):
 #     logger.info('map gmm path already exists.')
@@ -582,15 +582,40 @@ else:
 # else:
 #     logger.info('Generating score file for map_gmm analysis')
 #     files = analyze.recursive_find_all_files(ivec_dir, '.hdf5')
-#     gen_score_file(files, eval_map_gmm_score_file)
+# #    gen_score_file(files, eval_map_gmm_score_file)
 #     logger.info('Score file generated to: ' + eval_map_gmm_score_file)
+
+
+if os.path.exists(map_gmm_dir):
+    logger.info('map gmm path already exists.')
+else:
+    logger.info('Calculating map gmm for evaluation set')
+    train_feature_files = analyze.recursive_find_all_files(train_features_path, '.hdf5')
+    train_feat_files_dict = analyze.gen_filedict(train_feature_files)
+
+    map_gmm_trainer = analyze.gen_map_gmm_trainer(ubm, parameters['map_gmm_relevance_factor'], parameters['map_gmm_convergence_threshold'], parameters['map_gmm_max_iterations'])
+    utils.ensure_dir(map_gmm_dir)
+    analyze.gen_MAP_GMM_machines(ubm, train_feat_files_dict, map_gmm_trainer, map_gmm_dir)
+
+# eva_gmm_stats = analyze.recursive_load_gmm_stats(gmm_stats_eval_path)
+# class_gmms = analyze.recursive_load_gmm_machines(map_gmm_dir)
+
+logger.info('Generate score file for gmm comparisons')
+
+if os.path.exists(eval_map_gmm_score_file):
+    logger.info('Score file for map gmm analysis already exists in '+eval_map_gmm_score_file+'. No new score file is generated.')
+else:
+    logger.info('Generating score file for map_gmm analysis')
+    class_gmms_files = analyze.recursive_find_all_files(map_gmm_dir, '.hdf5')
+    eval_gmm_stats_files = analyze.recursive_find_all_files(gmm_stats_eval_path, '.hdf5')
+    analyze.calc_scores(class_gmms_files, eval_gmm_stats_files, bob.machine.linear_scoring, ubm, eval_map_gmm_score_file)
 
 #EVALUATE RESULTS
 logger.info('Evaluating results')
 logger.info('Evaluating ivector results')
 evaluate_score_file(eval_ivector_score_file,test_roc_eval_ivec_file, test_det_eval_ivec_file)
-# logger.info('Evaluating map adapted gmm results')
-# evaluate_score_file(eval_map_gmm_score_file, test_roc_eval_map_gmm_file, test_det_eval_map_gmm_file)
+logger.info('Evaluating map adapted gmm results')
+evaluate_score_file(eval_map_gmm_score_file, test_roc_eval_map_gmm_file, test_det_eval_map_gmm_file)
 
 total_end_time = time.clock()
 

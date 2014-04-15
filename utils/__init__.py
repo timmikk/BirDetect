@@ -20,6 +20,10 @@ import os
 import numpy
 from itertools import izip
 import scipy.io.wavfile
+import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 def ensure_dir(dirname):
   """ Creates the directory dirname if it does not already exist,
@@ -122,3 +126,16 @@ def load_wav_as_mono(wav_file):
     return rate, signal
     
 
+def get_bird_name_from_file_name(filename):
+    filename = os.path.basename(filename)
+    reg_exp = '^(?P<name>[a-zA-Z_]+)[-_\d]*.*\.hdf5'
+
+    prog = re.compile(reg_exp)
+    matchObj = prog.match(filename)
+    birdname = matchObj.group('name')
+    if(birdname is None):
+        logger.error('Cannot read name from file name: ' + filename)
+        return None
+    logger.debug('Bird name from ' + filename + ' = ' + birdname)
+
+    return birdname
