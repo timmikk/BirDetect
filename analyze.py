@@ -472,20 +472,45 @@ def gen_filedict(filelist):
 
     return filedict
 
-def calc_scores(class_gmms_files, probe_stats_files, distance_function, ubm, score_file):
-
-    f = open(score_file, 'w')
-
-    for class_gmm_file in class_gmms_files:
-        for stats_file in probe_stats_files:
-            class_gmm = load_gmm_machine_file(class_gmm_file)
-            stats = load_gmm_stats_file(stats_file)
-            score = distance_function([class_gmm], ubm, [stats])[0,0]
-
-            f.write('\"'+os.path.basename(class_gmm_file)+ '\",\"'+os.path.basename(stats_file)+'\",\"' + str(score) + '\"\n')
-    f.close()
 
 
+def gen_kmeans(training_set, number_of_gaussians):
+    logger.info('Generating k-means.')
+    #training_set = numpy.vstack(train_features)
+    feature_dimensions = input_size = training_set.shape[1]
+
+    # create the KMeans and UBM machine
+    kmeans = bob.machine.KMeansMachine(number_of_gaussians, feature_dimensions)
+
+
+    # create the KMeansTrainer
+    kmeans_trainer = bob.trainer.KMeansTrainer()
+
+    # train using the KMeansTrainer
+    kmeans_trainer.train(kmeans, training_set)
+
+    return kmeans
+
+def gen_ubm(kmeans, training_set):
+    logger.info('Generating UBM')
+    #training_set = numpy.vstack(train_features)
+    feature_dimensions = input_size = training_set.shape[1]
+
+    [variances, weights] = kmeans.get_variances_and_weights_for_each_cluster(training_set)
+    means = kmeans.means
+
+    ubm = bob.machine.GMMMachine(kmeans.dim_c, kmeans.dim_d)
+
+    # initialize the GMM
+    ubm.means = means
+    ubm.variances = variances
+    ubm.weights = weights
+
+    # train the GMM
+    trainer = bob.trainer.ML_GMMTrainer()
+    trainer.train(ubm, training_set)
+
+    return ubm
 
 #1. Extract and save features from training files
 # recursively_extract_features(train_sounds_path, train_features_path)

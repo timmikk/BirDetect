@@ -4,10 +4,16 @@ import os
 import bob
 import logging
 import time
+from bunch import Bunch
+import sys
 import analyze, utils, evaluate
+import ivector
+import ubmgmm
 import logging.config
 import argparse
 import yaml
+import traceback
+#import utils.Bunch as Bunch
 from matplotlib import pyplot
 
 __author__ = 'Timo Mikkilä'
@@ -28,86 +34,91 @@ def load_parameters(param_file):
     parameters = dict(parameters.items() + new_params.items())
 
 parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('run_mode', help='What to do', choices=['ivector', 'ubm-gmm'])
 parser.add_argument('--num_gauss', help='Number of gaussian used in calculations', default=16, type=int)
 parser.add_argument('--snd_path', help='Location of wav files. Must contain train and eval folders', default='snd')
 parser.add_argument('--dest_path', help='Location where all data is written to', default='dest')
 parser.add_argument('--params_file', help='Parameter file')
 
+
 args = parser.parse_args()
 
+paths = Bunch()
 
-dest_path = os.path.abspath(args.dest_path)
+paths.dest = os.path.abspath(args.dest_path)
 
-sound_path = os.path.abspath(args.snd_path)
-logger.info('sound_path=' + sound_path)
+paths.sound = os.path.abspath(args.snd_path)
+logger.info('sound=' + paths.sound)
 
-train_sounds_path = os.path.join(sound_path, 'train')
-logger.info('train_sounds_path=' + train_sounds_path)
-eval_sounds_path = os.path.join(sound_path, 'eval')
-logger.info('eval_sounds_path=' + eval_sounds_path)
+paths.train_sounds = os.path.join(paths.sound, 'train')
+logger.info('train_sounds=' + paths.train_sounds)
+paths.eval_sounds = os.path.join(paths.sound, 'eval')
+logger.info('eval_sounds=' + paths.eval_sounds)
 
 
-logger.info('dest_path=' + dest_path)
+logger.info('dest=' + paths.dest)
 
-eval_log_file = os.path.join(dest_path, 'eval.txt')
+paths.eval_log_file = os.path.join(paths.dest, 'eval.txt')
 
-features_path = os.path.join(dest_path, 'features')
-logger.info('features_path=' + features_path)
+paths.features = os.path.join(paths.dest, 'features')
+logger.info('features=' + paths.features)
 
-train_features_path = os.path.join(features_path, 'train')
-logger.info('train_features_path=' + train_features_path)
+paths.train_features = os.path.join(paths.features, 'train')
+logger.info('train_features=' + paths.train_features)
 
-eval_features_path = os.path.join(features_path, 'eval')
-logger.info('eval_features_path=' + eval_features_path)
+paths.eval_features = os.path.join(paths.features, 'eval')
+logger.info('eval_features=' + paths.eval_features)
 
-mfcc_path = os.path.join(dest_path, 'mfcc')
-logger.info('mfcc_path=' + mfcc_path)
-kmeans_file = os.path.join(dest_path, 'kmeans.hdf5')
-logger.info('kmeans_file=' + kmeans_file)
-ubm_file = os.path.join(dest_path, 'ubm.hdf5')
-logger.info('ubm_file=' + ubm_file)
-gmm_features_path = os.path.join(dest_path, 'gmm_stats')
-logger.info('gmm_features_path=' + gmm_features_path)
+paths.mfcc = os.path.join(paths.dest, 'mfcc')
+logger.info('mfcc=' + paths.mfcc)
+paths.kmeans_file = os.path.join(paths.dest, 'kmeans.hdf5')
+logger.info('kmeans_file=' + paths.kmeans_file)
+paths.ubm_file = os.path.join(paths.dest, 'ubm.hdf5')
+logger.info('ubm_file=' + paths.ubm_file)
+paths.gmm_features = os.path.join(paths.dest, 'gmm_stats')
+logger.info('gmm_features=' + paths.gmm_features)
 
-gmm_stats_train_path = os.path.join(gmm_features_path, 'train')
-logger.info('gmm_train_features_path=' + gmm_stats_train_path)
-gmm_stats_eval_path = os.path.join(gmm_features_path, 'eval')
-logger.info('gmm_eval_features_path=' + gmm_stats_eval_path)
+paths.gmm_stats_train = os.path.join(paths.gmm_features, 'train')
+logger.info('gmm_train_features=' + paths.gmm_stats_train)
+paths.gmm_stats_eval = os.path.join(paths.gmm_features, 'eval')
+logger.info('gmm_eval_features=' + paths.gmm_stats_eval)
 
-ivec_machine_file = os.path.join(dest_path, 'tv.hdf5')
-logger.info('ivec_machine_file=' + ivec_machine_file)
-ivec_dir = os.path.join(dest_path, 'ivectors')
-logger.info('ivec_dir=' + ivec_dir)
+paths.ivec_machine_file = os.path.join(paths.dest, 'tv.hdf5')
+logger.info('ivec_machine_file=' + paths.ivec_machine_file)
+paths.ivec_dir = os.path.join(paths.dest, 'ivectors')
+logger.info('ivec_dir=' + paths.ivec_dir)
 
-gmm_machine_file = os.path.join(dest_path, 'gmm_machine.hdf5')
-logger.info('gmm_machine_file=' + gmm_machine_file)
-map_gmm_dir = os.path.join(dest_path, 'map_gmm')
-logger.info('map_gmm_dir=' + map_gmm_dir)
+paths.gmm_machine_file = os.path.join(paths.dest, 'gmm_machine.hdf5')
+logger.info('gmm_machine_file=' + paths.gmm_machine_file)
+paths.map_gmm_dir = os.path.join(paths.dest, 'map_gmm')
+logger.info('map_gmm_dir=' + paths.map_gmm_dir)
 
-eval_ivector_score_file = os.path.join(dest_path, 'score-ivector-eval.txt')
-logger.info('eval_ivector_score_file=' + eval_ivector_score_file)
-eval_map_gmm_score_file = os.path.join(dest_path, 'score-map_gmm-eval.txt')
-logger.info('eval_map_gmm_score_file=' + eval_map_gmm_score_file)
+paths.eval_ivector_score_file = os.path.join(paths.dest, 'score-ivector-eval.txt')
+logger.info('eval_ivector_score_file=' + paths.eval_ivector_score_file)
+paths.eval_map_gmm_score_file = os.path.join(paths.dest, 'score-map_gmm-eval.txt')
+logger.info('eval_map_gmm_score_file=' + paths.eval_map_gmm_score_file)
 
-test_roc_eval_map_gmm_file = os.path.join(dest_path, 'gmm_adapted_roc.png')
-logger.info('test_roc_eval_map_gmm_file=' + test_roc_eval_map_gmm_file)
-test_det_eval_map_gmm_file = os.path.join(dest_path, 'gmm_adapted_det.png')
-logger.info('test_det_eval_map_gmm_file=' + test_det_eval_map_gmm_file)
+paths.test_roc_eval_map_gmm_file = os.path.join(paths.dest, 'gmm_adapted_roc.png')
+logger.info('test_roc_eval_map_gmm_file=' + paths.test_roc_eval_map_gmm_file)
+paths.test_det_eval_map_gmm_file = os.path.join(paths.dest, 'gmm_adapted_det.png')
+logger.info('test_det_eval_map_gmm_file=' + paths.test_det_eval_map_gmm_file)
 
-test_roc_eval_ivec_file = os.path.join(dest_path, 'ivec_roc.png')
-logger.info('test_roc_eval_ivec_file=' + test_roc_eval_ivec_file)
-test_det_eval_ivec_file = os.path.join(dest_path, 'ivec_det.png')
-logger.info('test_det_eval_ivec_file=' + test_det_eval_ivec_file)
+paths.test_roc_eval_ivec_file = os.path.join(paths.dest, 'ivec_roc.png')
+logger.info('test_roc_eval_ivec_file=' + paths.test_roc_eval_ivec_file)
+paths.test_det_eval_ivec_file = os.path.join(paths.dest, 'ivec_det.png')
+logger.info('test_det_eval_ivec_file=' + paths.test_det_eval_ivec_file)
 
-conf_default_file = os.path.join(os.path.dirname(__file__), 'default.cfg')
+paths.conf_default_file = os.path.join(os.path.dirname(__file__), 'default.cfg')
 
-log_file_locator = lambda *x: os.path.join(dest_path, *x)
+log_file_locator = lambda *x: os.path.join(paths.dest, *x)
 
 #Load default parameters
-load_parameters(conf_default_file)
+load_parameters(paths.conf_default_file)
 
 if args.params_file is not None:
     load_parameters(args.params_file)
+
+params = Bunch(parameters)
 
 LOGGING = {
     "version": 1,
@@ -186,8 +197,8 @@ def setup_logging(dest_path, logging_json, default_level=logging.INFO, env_key='
 
 
 
-info_log_file = os.path.join(dest_path, 'info.log')
-debug_log_file = os.path.join(dest_path, 'debug.log')
+info_log_file = os.path.join(paths.dest, 'info.log')
+debug_log_file = os.path.join(paths.dest, 'debug.log')
 # create a file handler
 # console_handler = logging.StreamHandler()
 # console_handler.setLevel(logging.INFO)
@@ -206,15 +217,17 @@ debug_log_file = os.path.join(dest_path, 'debug.log')
 # logger.addHandler(debug_handler)
 
 log_conf_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'logging.json')
-setup_logging(dest_path, LOGGING)
+setup_logging(paths.dest, LOGGING)
 
-logger.info('Loading parameters from ' + conf_default_file)
+logger.info('Loading parameters from ' + paths.conf_default_file)
 logger.info('Parameters loaded: ' + str(parameters))
 
 logger.info('Other parameters:')
-num_gauss = args.num_gauss #defaults to 16 #19# 128 512
-logger.info('num_gauss=' + str(num_gauss))
-
+#num_gauss = args.num_gauss #defaults to 16 #19# 128 512
+#logger.info('num_gauss=' + str(num_gauss))
+if(args.num_gauss is not None):
+    logger.warning('Overriding number of gaussians (' + str(params.number_of_gaussians) + ' -> ' + str(args.num_gauss) + ')')
+    params.number_of_gaussians = args.num_gauss
 #parameters['kmeans_num_gauss'] = num_gauss
 #parameters['gmm_stat_num_gauss'] = num_gauss
 #parameters['gmm_adapted_num_gauss'] = num_gauss
@@ -297,283 +310,199 @@ logger.info('num_gauss=' + str(num_gauss))
 # logger.info('parameters['ubm_max_iterations']=' + str(parameters['ubm_max_iterations']))
 
 
-def print_evaluation_log_file(filename, ):
-    with open(filename, "w") as f:
-        f.write('Parameters used\n')
-        for key in parameters.keys():
-            f.write('' + key + ': ' + str(parameters[key])+'\n')
-        # f.write('Parameters used')
-        # f.write('\nparameters['kmeans_num_gauss']=' + str(parameters['kmeans_num_gauss']))
-        # f.write('\nparameters['kmeans_dim']=' + str(parameters['kmeans_dim']))
-        #
-        # #GMM stats parameters
-        # f.write('\n\nGMM stats parameters:')
-        # f.write('\nparameters['gmm_stat_num_gauss']=' + str(parameters['gmm_stat_num_gauss']))
-        # f.write('\nparameters['gmm_stat_dim']=' + str(parameters['gmm_stat_dim']))
-        #
-        # #Ivector machine parameters
-        # f.write('\n\nIvector machine parameters:')
-        # f.write('\nparameters['ivec_machine_dim']=' + str(parameters['ivec_machine_dim']))
-        # f.write('\nparameters['ivec_machine_variance_treshold']=' + str(parameters['ivec_machine_variance_treshold']))
-        #
-        # #Ivector trainer parameters
-        # f.write('\n\nIvector trainer parameters:')
-        # f.write('\nparameters['ivec_trainer_max_iterations']=' + str(parameters['ivec_trainer_max_iterations']))
-        # f.write('\nparameters['ivec_trainer_update_sigma']=' + str(parameters['ivec_trainer_update_sigma']))
-        #
-        # #Parameters for map gmm trainer
-        # f.write('\n\nMap gmm trainer parameters:')
-        # f.write('\nparameters['map_gmm_relevance_factor']=' + str(parameters['map_gmm_relevance_factor']))
-        # f.write('\nparameters['map_gmm_convergence_threshold']=' + str(parameters['map_gmm_convergence_threshold']))
-        # f.write('\nparameters['map_gmm_max_iterations']=' + str(parameters['map_gmm_max_iterations']))
-        #
-        # #Parameters for map adapted gmm machine
-        # f.write('\n\nMap adapted gmm machine parameters:')
-        # f.write('\nparameters['gmm_adapted_num_gauss']=' + str(parameters['gmm_adapted_num_gauss']))
-        # f.write('\nparameters['gmm_adapted_dim']=' + str(parameters['gmm_adapted_dim']))
-        #
-        # f.write('\n\nUBM parameters:')
-        # f.write('\nparameters['ubm_gmm_num_gauss']=' + str(parameters['ubm_gmm_num_gauss']))
-        # f.write('\nparameters['ubm_gmm_dim']=' + str(parameters['ubm_gmm_dim']))
-        # f.write('\nparameters['ubm_convergence_threshold']=' + str(parameters['ubm_convergence_threshold']))
-        # f.write('\nparameters['ubm_max_iterations']=' + str(parameters['ubm_max_iterations']))
+if args.run_mode == 'ubm-gmm':
+    worker = ubmgmm.ubm_gmm_worker(paths, params)
+elif args.run_mode == 'ivector':
+    worker = ivector.ivector_worker(paths, params)
+try:
+    worker.run()
+except:
+    logging.exception('Something went wrong')
 
-def gen_score_file(files, score_file):
-    #Load all ivec file names to array
-    #Compare files to each other and write to score file
-    logger.debug('Generating score file to ' + score_file)
-    f = open(score_file, 'w')
-
-    for f1 in files:
-        for f2 in files:
-            f1_loaded = bob.io.load(f1)
-            f2_loaded = bob.io.load(f2)
-            f1_loaded = numpy.linalg.norm(f1_loaded)
-            f2_loaded = numpy.linalg.norm(f2_loaded)
-            score = numpy.dot(f1_loaded, f2_loaded)
-
-            #score = utils.cosine_score(f1_loaded, f2_loaded)
-            f.write('\"'+f1[len(ivec_dir)+1:] + '\",\"' + f2[len(ivec_dir)+1:] + '\",\"' + str(score) + '\"\n')
-
-    f.close()
-
-def evaluate_score_file(score_file, roc_file, det_file):
-    logger.info('Evaluating ' + score_file)
-
-    logger.info('Finding negatives and positives from score file')
-    negatives, positives = evaluate.parse_scores_from_file(score_file)
-
-    num_negative = len(negatives)
-    num_positives = len(positives)
-    logger.info('Found ' + str(num_negative) + ' negatives and ' + str(num_positives) + ' positives')
-
-    # eer_rocch = bob.measure.eer_rocch(negatives, positives)
-    # logger.info('eer_rocch=' + str(eer_rocch))
-    # FAR_eer_rocch, FRR_eer_rocch = bob.measure.farfrr(negatives, positives, eer_rocch)
-    # logger.info('FAR_eer_rocch=' + str(FAR_eer_rocch))
-    # logger.info('FRR_eer_rocch=' + str(FRR_eer_rocch))
-    # correct_negatives_eer_rocch = bob.measure.correctly_classified_negatives(negatives)
-
-    eer_threshold = bob.measure.eer_threshold(negatives, positives)
-    logger.info('eer_threshold=' + str(eer_threshold))
-    FAR_eer_threshold, FRR_eer_threshold = bob.measure.farfrr(negatives, positives, eer_threshold)
-    logger.info('FAR_eer_threshold=' + str(FAR_eer_threshold))
-    logger.info('FRR_eer_threshold=' + str(FRR_eer_threshold))
-    correct_negatives_FAR_eer_threshold = bob.measure.correctly_classified_negatives(negatives, FAR_eer_threshold).sum()
-    correct_positives_FRR_eer_threshold = bob.measure.correctly_classified_positives(positives, FRR_eer_threshold).sum()
-
-    # min_hter_treshold = bob.measure.min_hter_threshold(negatives, positives)
-    # logger.info('min_hter_treshold=' + str(min_hter_treshold))
-    # FAR_min_hter_treshold, FRR_min_hter_treshold = bob.measure.farfrr(negatives, positives, min_hter_treshold)
-    # logger.info('FAR_min_hter_treshold=' + str(FAR_min_hter_treshold))
-    # logger.info('FRR_min_hter_treshold=' + str(FRR_min_hter_treshold))
-    # correct_negatives_min_hter_treshold = bob.measure.correctly_classified_negatives(negatives, min_hter_treshold)
-    # correct_positives_min_hter_treshold = bob.measure.correctly_classified_positives(positives, min_hter_treshold)
-
-
-    print_evaluation_log_file(eval_log_file)
-    with open(eval_log_file, "a") as f:
-        f.write('\n\nEvaluation')
-        f.write('\nNegatives: ' + str(num_negative))
-        f.write('\nPositives: ' + str(num_positives))
-        f.write('\nEER treshold:' + str(eer_threshold))
-        f.write('\nFAR: ' + str(FAR_eer_threshold) + ' (' + str(correct_negatives_FAR_eer_threshold) + '/' +str(num_negative)+')')
-        f.write('\nFRR: ' + str(FRR_eer_threshold) + ' (' + str(correct_positives_FRR_eer_threshold) + '/' +str(num_positives)+')')
-
-
-        # f.write('\nMin HTER treshold:' + str(min_hter_treshold))
-        # f.write('FAR: ' + str(FAR_min_hter_treshold))
-        # f.write('FRR: ' + str(FRR_min_hter_treshold))
-        # f.write('Correctly classified negatives: ' + str(correct_negatives_min_hter_treshold))
-        # f.write('Correctly classified positives: ' + str(correct_positives_min_hter_treshold))
-
-
-
-    logger.info('Generating ROC curve to ' + roc_file)
-    evaluate.gen_roc_curve(negatives, positives, roc_file)
-
-    logger.info('Generating DET curve to ' + det_file)
-    evaluate.gen_det_curve(negatives, positives, det_file)
-
-total_start_time = time.clock()
-#EXECUTE!!
-
-#Split audio files
-# if args.split:
-#     if os.path.exists(sound_path):
-#         logger.info('No splitting is done as split destination directory ('+ sound_path +') already exists')
-#     else:
-#         logger.info('Splitting wavs from ' + orig_sound_path +' to ' + sound_path)
-#         split_wavs.recursively_split_wav_files(orig_sound_path, sound_path, invalid_snd_path)
-#         split_wavs.recursively_plot_wav_files(orig_sound_path, split_plot_path)
-
-
-##RUN ANALYSIS##
-logger.info('STARTING PROCESSING')
-logger.info('Extracting features')
-
-#1. Extract and save features from training files
-if os.path.exists(train_features_path):
-    logger.warn('Features are not extracted for train data as folder already exists('+train_features_path+').')
-else:
-    logger.info('Extracting mfcc features from train data')
-    logger.debug('From ' + train_sounds_path + ' to ' + train_features_path)
-    analyze.recursively_extract_features(train_sounds_path, train_features_path, parameters['mfcc_wl'], parameters['mfcc_ws'], parameters['mfcc_nf'], parameters['mfcc_nceps'], parameters['mfcc_fmin'], parameters['mfcc_fmax'], parameters['mfcc_d_w'], parameters['mfcc_pre'], parameters['mfcc_mel'])
-
-#2. Extract and save features from evaluation files
-if os.path.exists(eval_features_path):
-    logger.warn('Features are not extracted for evaluation data as folder already exists ('+eval_features_path+').')
-else:
-    logger.info('Extracting mfcc features from evaluation data')
-    logger.debug('From ' + eval_sounds_path + ' to ' + eval_features_path)
-    analyze.recursively_extract_features(eval_sounds_path, eval_features_path, parameters['mfcc_wl'], parameters['mfcc_ws'], parameters['mfcc_nf'], parameters['mfcc_nceps'], parameters['mfcc_fmin'], parameters['mfcc_fmax'], parameters['mfcc_d_w'], parameters['mfcc_pre'], parameters['mfcc_mel'])
-
-#3. Read training features to array
-logger.info('Load train features')
-#analyze.recursive_test_wavs_for_nan(sound_path)
-#analyze.recursive_test_for_nan(train_features_path)
-
-train_features = analyze.recursive_load_mfcc_files(train_features_path)
-
-#4. array is converted to multidimensional ndarray
-logger.info('Convert train features array')
-train_features = numpy.vstack(train_features)
-
-#5. Clustering the train data using k-means and save result
-logger.info('Train k-means')
-
-kmeans = None
-
-if os.path.isfile(kmeans_file):
-    logger.info('K-Means file exists (' + kmeans_file + '). No new K-Means is generated.')
-    kmeans_hdf5 = bob.io.HDF5File(kmeans_file)
-    kmeans = bob.machine.KMeansMachine(kmeans_hdf5)
-    logger.info('K-Means file loaded')
-else:
-    kmeans = analyze.train_kmeans_machine(train_features, parameters['kmeans_num_gauss'], parameters['kmeans_dim'])
-    logger.info('save K-Means to file: ' + kmeans_file)
-    kmeans.save(bob.io.HDF5File(kmeans_file, 'w'))
-
-#analyze.test_array_for_nan(kmeans.means)
-#6. Create the universal background model
-
-
-#7. Train ubm-gmm and save result
-logger.info('Train UBM-GMM')
-
-ubm = None
-
-#If UBM file exists, open it
-if os.path.isfile(ubm_file):
-    logger.info('UBM file exists (' + ubm_file + '). No new UBM is generated.')
-    ubm_hdf5 = bob.io.HDF5File(ubm_file)
-    ubm = bob.machine.GMMMachine(ubm_hdf5)
-    logger.info('UBM file loaded')
-else:
-    logger.info('No UBM file found (' + ubm_file + '). New UBM is generated.')
-    ubm = analyze.train_ubm_gmm_with_features(kmeans, train_features, parameters['ubm_gmm_num_gauss'], parameters['ubm_gmm_dim'], parameters['ubm_convergence_threshold'], parameters['ubm_max_iterations'])
-#Save ubm
-    logger.info('Save UBM to file: ' + ubm_file)
-    ubm.save(bob.io.HDF5File(ubm_file, "w"))
-
-
-logger.info('Compute GMM sufficient statistics for both training and eval sets')
-#8. Compute GMM sufficient statistics for both training and eval sets
-dim = train_features.shape[1]
-logger.info('Train features dimension = ' + str(dim))
-
-if os.path.exists(gmm_stats_train_path):
-    logger.info('GMM train stats path exists ('+ gmm_stats_train_path +') Skipping... ')
-else:
-    logger.info('Calculating GMM train stats')
-    analyze.compute_gmm_sufficient_statistics(ubm, train_features_path, gmm_stats_train_path)
-
-if os.path.exists(gmm_stats_eval_path):
-    logger.info('GMM evaluation stats path exists ('+ gmm_stats_eval_path +') Skipping... ')
-else:
-    logger.info('Calculating GMM evaluation stats')
-    analyze.compute_gmm_sufficient_statistics(ubm, eval_features_path, gmm_stats_eval_path)
-
-#9. Training TV and Sigma matrices
-logger.info('Training ivector machine')
-gmm_train_stats = analyze.recursive_load_gmm_stats(gmm_stats_train_path)
-
-ivec_machine = None
-
-if os.path.isfile(ivec_machine_file):
-    logger.info('Ivector machine file exists (' + ivec_machine_file + '). No new ivector machine is generated.')
-    tv_hdf5 = bob.io.HDF5File(ivec_machine_file)
-    ivec_machine = bob.machine.IVectorMachine(tv_hdf5)
-    logger.info('Ivector machine loaded')
-else:
-    logger.info('Generating ivector machine.')
-    ivec_machine = analyze.gen_ivec_machine(gmm_train_stats, ubm, parameters['ivec_machine_dim'], parameters['ivec_machine_variance_treshold'], parameters['ivec_trainer_max_iterations'], parameters['ivec_trainer_update_sigma'])
-    logger.info('Ivector machine generated.')
-    #save the TV matrix
-    logger.info('Saving ivector machine to ' + ivec_machine_file)
-    ivec_machine.save(bob.io.HDF5File(ivec_machine_file, 'w'))
-
-#10. Extract i-vectors of the eval set..."
-
-logger.info('Extract i-vectors of the evaluation set.')
-if os.path.exists(ivec_dir):
-    logger.info('Ivectors  for evaluation set found so no ivectors are calculated.')
-else:
-    logger.info('Calculating ivectors for evaluation set')
-    analyze.extract_i_vectors(gmm_stats_eval_path, ivec_dir, ivec_machine)
-
-logger.info('Generate score file for ivector comparisons')
-if os.path.exists(eval_ivector_score_file):
-    logger.info('Score file for ivector analysis already exists in '+eval_ivector_score_file+'. No new score file is generated.')
-else:
-    logger.info('Generating score file for ivector analysis')
-    files = analyze.recursive_find_all_files(ivec_dir, '.hdf5')
-    gen_score_file(files, eval_ivector_score_file)
-    logger.info('Score file generated to: ' + eval_ivector_score_file)
-
-
-logger.info('Train GMM Machine with Map adaptation')
-gmm_machine = None
-
-# if os.path.isfile(gmm_machine_file):
-#     logger.info('GMM Machine file exists (' + gmm_machine_file + '). Loading MAP GMM Machine from file instead of generating it.')
-#     gmm_machine_hdf5 = bob.io.HDF5File(gmm_machine_file)
-#     gmm_machine = bob.machine.GMMMachine(gmm_machine_hdf5)
-#     logger.info('MAP GMM Machine file loaded')
-# else:
-#     logger.info('Generating MAP GMM Machine.')
-#     gmm_machine = analyze.gen_MAP_GMM_machine(ubm, train_features, parameters['gmm_adapted_num_gauss'], parameters['gmm_adapted_dim'], parameters['map_gmm_relevance_factor'], parameters['map_gmm_convergence_threshold'], parameters['map_gmm_max_iterations'])
-#     logger.info('TV matrix generated.')
-#     #save the TV matrix
-#     logger.info('Saving MAP GMM Machine to ' + gmm_machine_file)
-#     gmm_machine.save(bob.io.HDF5File(gmm_machine_file, 'w'))
+# total_start_time = time.clock()
+# #EXECUTE!!
 #
-# logger.info('Run evaluation set through map gmm machine.')
+# #Split audio files
+# # if args.split:
+# #     if os.path.exists(sound_path):
+# #         logger.info('No splitting is done as split destination directory ('+ sound_path +') already exists')
+# #     else:
+# #         logger.info('Splitting wavs from ' + orig_sound_path +' to ' + sound_path)
+# #         split_wavs.recursively_split_wav_files(orig_sound_path, sound_path, invalid_snd_path)
+# #         split_wavs.recursively_plot_wav_files(orig_sound_path, split_plot_path)
+#
+#
+# ##RUN ANALYSIS##
+# logger.info('STARTING PROCESSING')
+# logger.info('Extracting features')
+#
+# #1. Extract and save features from training files
+# if os.path.exists(train_features_path):
+#     logger.warn('Features are not extracted for train data as folder already exists('+train_features_path+').')
+# else:
+#     logger.info('Extracting mfcc features from train data')
+#     logger.debug('From ' + train_sounds_path + ' to ' + train_features_path)
+#     analyze.recursively_extract_features(train_sounds_path, train_features_path, params.mfcc_wl, parameters['mfcc_ws'], parameters['mfcc_nf'], parameters['mfcc_nceps'], parameters['mfcc_fmin'], parameters['mfcc_fmax'], parameters['mfcc_d_w'], parameters['mfcc_pre'], parameters['mfcc_mel'])
+#
+# #2. Extract and save features from evaluation files
+# if os.path.exists(eval_features_path):
+#     logger.warn('Features are not extracted for evaluation data as folder already exists ('+eval_features_path+').')
+# else:
+#     logger.info('Extracting mfcc features from evaluation data')
+#     logger.debug('From ' + eval_sounds_path + ' to ' + eval_features_path)
+#     analyze.recursively_extract_features(eval_sounds_path, eval_features_path, parameters['mfcc_wl'], parameters['mfcc_ws'], parameters['mfcc_nf'], parameters['mfcc_nceps'], parameters['mfcc_fmin'], parameters['mfcc_fmax'], parameters['mfcc_d_w'], parameters['mfcc_pre'], parameters['mfcc_mel'])
+#
+# #3. Read training features to array
+# logger.info('Load train features')
+# #analyze.recursive_test_wavs_for_nan(sound_path)
+# #analyze.recursive_test_for_nan(train_features_path)
+#
+# train_features = analyze.recursive_load_mfcc_files(train_features_path)
+#
+# #4. array is converted to multidimensional ndarray
+# logger.info('Convert train features array')
+# train_features = numpy.vstack(train_features)
+#
+# #5. Clustering the train data using k-means and save result
+# logger.info('Train k-means')
+#
+# kmeans = None
+#
+# if os.path.isfile(kmeans_file):
+#     logger.info('K-Means file exists (' + kmeans_file + '). No new K-Means is generated.')
+#     kmeans_hdf5 = bob.io.HDF5File(kmeans_file)
+#     kmeans = bob.machine.KMeansMachine(kmeans_hdf5)
+#     logger.info('K-Means file loaded')
+# else:
+#     kmeans = analyze.train_kmeans_machine(train_features, parameters['kmeans_num_gauss'], parameters['kmeans_dim'])
+#     logger.info('save K-Means to file: ' + kmeans_file)
+#     kmeans.save(bob.io.HDF5File(kmeans_file, 'w'))
+#
+# #analyze.test_array_for_nan(kmeans.means)
+# #6. Create the universal background model
+#
+#
+# #7. Train ubm-gmm and save result
+# logger.info('Train UBM-GMM')
+#
+# ubm = None
+#
+# #If UBM file exists, open it
+# if os.path.isfile(ubm_file):
+#     logger.info('UBM file exists (' + ubm_file + '). No new UBM is generated.')
+#     ubm_hdf5 = bob.io.HDF5File(ubm_file)
+#     ubm = bob.machine.GMMMachine(ubm_hdf5)
+#     logger.info('UBM file loaded')
+# else:
+#     logger.info('No UBM file found (' + ubm_file + '). New UBM is generated.')
+#     ubm = analyze.train_ubm_gmm_with_features(kmeans, train_features, parameters['ubm_gmm_num_gauss'], parameters['ubm_gmm_dim'], parameters['ubm_convergence_threshold'], parameters['ubm_max_iterations'])
+# #Save ubm
+#     logger.info('Save UBM to file: ' + ubm_file)
+#     ubm.save(bob.io.HDF5File(ubm_file, "w"))
+#
+#
+# logger.info('Compute GMM sufficient statistics for both training and eval sets')
+# #8. Compute GMM sufficient statistics for both training and eval sets
+# dim = train_features.shape[1]
+# logger.info('Train features dimension = ' + str(dim))
+#
+# if os.path.exists(gmm_stats_train_path):
+#     logger.info('GMM train stats path exists ('+ gmm_stats_train_path +') Skipping... ')
+# else:
+#     logger.info('Calculating GMM train stats')
+#     analyze.compute_gmm_sufficient_statistics(ubm, train_features_path, gmm_stats_train_path)
+#
+# if os.path.exists(gmm_stats_eval_path):
+#     logger.info('GMM evaluation stats path exists ('+ gmm_stats_eval_path +') Skipping... ')
+# else:
+#     logger.info('Calculating GMM evaluation stats')
+#     analyze.compute_gmm_sufficient_statistics(ubm, eval_features_path, gmm_stats_eval_path)
+#
+# #9. Training TV and Sigma matrices
+# logger.info('Training ivector machine')
+# gmm_train_stats = analyze.recursive_load_gmm_stats(gmm_stats_train_path)
+#
+# ivec_machine = None
+#
+# if os.path.isfile(ivec_machine_file):
+#     logger.info('Ivector machine file exists (' + ivec_machine_file + '). No new ivector machine is generated.')
+#     tv_hdf5 = bob.io.HDF5File(ivec_machine_file)
+#     ivec_machine = bob.machine.IVectorMachine(tv_hdf5)
+#     logger.info('Ivector machine loaded')
+# else:
+#     logger.info('Generating ivector machine.')
+#     ivec_machine = analyze.gen_ivec_machine(gmm_train_stats, ubm, parameters['ivec_machine_dim'], parameters['ivec_machine_variance_treshold'], parameters['ivec_trainer_max_iterations'], parameters['ivec_trainer_update_sigma'])
+#     logger.info('Ivector machine generated.')
+#     #save the TV matrix
+#     logger.info('Saving ivector machine to ' + ivec_machine_file)
+#     ivec_machine.save(bob.io.HDF5File(ivec_machine_file, 'w'))
+#
+# #10. Extract i-vectors of the eval set..."
+#
+# logger.info('Extract i-vectors of the evaluation set.')
+# if os.path.exists(ivec_dir):
+#     logger.info('Ivectors  for evaluation set found so no ivectors are calculated.')
+# else:
+#     logger.info('Calculating ivectors for evaluation set')
+#     analyze.extract_i_vectors(gmm_stats_eval_path, ivec_dir, ivec_machine)
+#
+# logger.info('Generate score file for ivector comparisons')
+# if os.path.exists(eval_ivector_score_file):
+#     logger.info('Score file for ivector analysis already exists in '+eval_ivector_score_file+'. No new score file is generated.')
+# else:
+#     logger.info('Generating score file for ivector analysis')
+#     files = analyze.recursive_find_all_files(ivec_dir, '.hdf5')
+#     evaluate.gen_score_file(files, eval_ivector_score_file, ivec_dir)
+#     logger.info('Score file generated to: ' + eval_ivector_score_file)
+#
+#
+# logger.info('Train GMM Machine with Map adaptation')
+# gmm_machine = None
+#
+# # if os.path.isfile(gmm_machine_file):
+# #     logger.info('GMM Machine file exists (' + gmm_machine_file + '). Loading MAP GMM Machine from file instead of generating it.')
+# #     gmm_machine_hdf5 = bob.io.HDF5File(gmm_machine_file)
+# #     gmm_machine = bob.machine.GMMMachine(gmm_machine_hdf5)
+# #     logger.info('MAP GMM Machine file loaded')
+# # else:
+# #     logger.info('Generating MAP GMM Machine.')
+# #     gmm_machine = analyze.gen_MAP_GMM_machine(ubm, train_features, parameters['gmm_adapted_num_gauss'], parameters['gmm_adapted_dim'], parameters['map_gmm_relevance_factor'], parameters['map_gmm_convergence_threshold'], parameters['map_gmm_max_iterations'])
+# #     logger.info('TV matrix generated.')
+# #     #save the TV matrix
+# #     logger.info('Saving MAP GMM Machine to ' + gmm_machine_file)
+# #     gmm_machine.save(bob.io.HDF5File(gmm_machine_file, 'w'))
+# #
+# # logger.info('Run evaluation set through map gmm machine.')
+# # if os.path.exists(map_gmm_dir):
+# #     logger.info('map gmm path already exists.')
+# # else:
+# #     logger.info('Calculating map gmm for evaluation set')
+# #     analyze.map_gmm_machine_analysis(eval_features_path, map_gmm_dir, gmm_machine)
+# #
+# # logger.info('Generate score file for gmm comparisons')
+# #
+# # if os.path.exists(eval_map_gmm_score_file):
+# #     logger.info('Score file for map gmm analysis already exists in '+eval_map_gmm_score_file+'. No new score file is generated.')
+# # else:
+# #     logger.info('Generating score file for map_gmm analysis')
+# #     files = analyze.recursive_find_all_files(ivec_dir, '.hdf5')
+# # #    gen_score_file(files, eval_map_gmm_score_file)
+# #     logger.info('Score file generated to: ' + eval_map_gmm_score_file)
+#
+#
 # if os.path.exists(map_gmm_dir):
 #     logger.info('map gmm path already exists.')
 # else:
 #     logger.info('Calculating map gmm for evaluation set')
-#     analyze.map_gmm_machine_analysis(eval_features_path, map_gmm_dir, gmm_machine)
+#     train_feature_files = analyze.recursive_find_all_files(train_features_path, '.hdf5')
+#     train_feat_files_dict = analyze.gen_filedict(train_feature_files)
+#
+#     map_gmm_trainer = analyze.gen_map_gmm_trainer(ubm, parameters['map_gmm_relevance_factor'], parameters['map_gmm_convergence_threshold'], parameters['map_gmm_max_iterations'])
+#     utils.ensure_dir(map_gmm_dir)
+#     analyze.gen_MAP_GMM_machines(ubm, train_feat_files_dict, map_gmm_trainer, map_gmm_dir)
+#
+# # eva_gmm_stats = analyze.recursive_load_gmm_stats(gmm_stats_eval_path)
+# # class_gmms = analyze.recursive_load_gmm_machines(map_gmm_dir)
 #
 # logger.info('Generate score file for gmm comparisons')
 #
@@ -581,42 +510,25 @@ gmm_machine = None
 #     logger.info('Score file for map gmm analysis already exists in '+eval_map_gmm_score_file+'. No new score file is generated.')
 # else:
 #     logger.info('Generating score file for map_gmm analysis')
-#     files = analyze.recursive_find_all_files(ivec_dir, '.hdf5')
-# #    gen_score_file(files, eval_map_gmm_score_file)
-#     logger.info('Score file generated to: ' + eval_map_gmm_score_file)
-
-
-if os.path.exists(map_gmm_dir):
-    logger.info('map gmm path already exists.')
-else:
-    logger.info('Calculating map gmm for evaluation set')
-    train_feature_files = analyze.recursive_find_all_files(train_features_path, '.hdf5')
-    train_feat_files_dict = analyze.gen_filedict(train_feature_files)
-
-    map_gmm_trainer = analyze.gen_map_gmm_trainer(ubm, parameters['map_gmm_relevance_factor'], parameters['map_gmm_convergence_threshold'], parameters['map_gmm_max_iterations'])
-    utils.ensure_dir(map_gmm_dir)
-    analyze.gen_MAP_GMM_machines(ubm, train_feat_files_dict, map_gmm_trainer, map_gmm_dir)
-
-# eva_gmm_stats = analyze.recursive_load_gmm_stats(gmm_stats_eval_path)
-# class_gmms = analyze.recursive_load_gmm_machines(map_gmm_dir)
-
-logger.info('Generate score file for gmm comparisons')
-
-if os.path.exists(eval_map_gmm_score_file):
-    logger.info('Score file for map gmm analysis already exists in '+eval_map_gmm_score_file+'. No new score file is generated.')
-else:
-    logger.info('Generating score file for map_gmm analysis')
-    class_gmms_files = analyze.recursive_find_all_files(map_gmm_dir, '.hdf5')
-    eval_gmm_stats_files = analyze.recursive_find_all_files(gmm_stats_eval_path, '.hdf5')
-    analyze.calc_scores(class_gmms_files, eval_gmm_stats_files, bob.machine.linear_scoring, ubm, eval_map_gmm_score_file)
-
-#EVALUATE RESULTS
-logger.info('Evaluating results')
-logger.info('Evaluating ivector results')
-evaluate_score_file(eval_ivector_score_file,test_roc_eval_ivec_file, test_det_eval_ivec_file)
-logger.info('Evaluating map adapted gmm results')
-evaluate_score_file(eval_map_gmm_score_file, test_roc_eval_map_gmm_file, test_det_eval_map_gmm_file)
-
-total_end_time = time.clock()
-
-logger.info('Total time elapsed: ' + str(total_end_time - total_start_time))
+#     class_gmms_files = analyze.recursive_find_all_files(map_gmm_dir, '.hdf5')
+#     eval_gmm_stats_files = analyze.recursive_find_all_files(gmm_stats_eval_path, '.hdf5')
+#     analyze.calc_scores(class_gmms_files, eval_gmm_stats_files, bob.machine.linear_scoring, ubm, eval_map_gmm_score_file)
+#
+# #EVALUATE RESULTS
+#
+# print_evaluation_log_file(eval_log_file)
+#
+#
+# logger.info('Evaluating results')
+# logger.info('Evaluating ivector results')
+# logger.info('Finding negatives and positives from score file')
+# negatives, positives = evaluate.parse_scores_from_file(eval_ivector_score_file)
+# evaluate.evaluate_score_file(negatives, positives,test_roc_eval_ivec_file, test_det_eval_ivec_file, eval_log_file)
+# logger.info('Evaluating map adapted gmm results')
+# logger.info('Finding negatives and positives from score file')
+# negatives, positives = evaluate.parse_scores_from_file(eval_map_gmm_score_file)
+# evaluate.evaluate_score_file(negatives, positives, test_roc_eval_map_gmm_file, test_det_eval_map_gmm_file, eval_log_file)
+#
+# total_end_time = time.clock()
+#
+# logger.info('Total time elapsed: ' + str(total_end_time - total_start_time))

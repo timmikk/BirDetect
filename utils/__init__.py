@@ -25,6 +25,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+bird_name_reg_exp = '^(?P<name>[a-zA-Z_]+)[-_\d]*.*\.hdf5'
+
 def ensure_dir(dirname):
   """ Creates the directory dirname if it does not already exist,
       taking into account concurrent 'creation' on the grid.
@@ -128,9 +130,9 @@ def load_wav_as_mono(wav_file):
 
 def get_bird_name_from_file_name(filename):
     filename = os.path.basename(filename)
-    reg_exp = '^(?P<name>[a-zA-Z_]+)[-_\d]*.*\.hdf5'
 
-    prog = re.compile(reg_exp)
+
+    prog = re.compile(bird_name_reg_exp)
     matchObj = prog.match(filename)
     birdname = matchObj.group('name')
     if(birdname is None):
