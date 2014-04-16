@@ -34,6 +34,42 @@ class ubm_gmm_worker:
                 f.write('\"'+os.path.basename(class_gmm_file)+ '\",\"'+os.path.basename(stats_file)+'\",\"' + str(score) + '\"\n')
         f.close()
 
+    def calc_scores_fast(self, class_gmms_files, probe_stats_files, distance_function, ubm, score_file):
+        self.logger.debug('calc_scores')
+        # f = open(score_file, 'w')
+
+        #load class files
+        glass_gmms = []
+        for class_gmm_file in class_gmms_files:
+            glass_gmms.append(analyze.load_gmm_machine_file(class_gmm_file))
+
+        #load stats files
+        gmm_stats = []
+        for stats_file in probe_stats_files:
+            gmm_stats.append(analyze.load_gmm_stats_file(stats_file))
+
+        score = distance_function(glass_gmms, ubm, gmm_stats)
+        self.logger.info('done')
+
+        f = open(score_file, 'w')
+        for class_index, class_file in enumerate(class_gmms_files):
+            for stats_index, stats_file in enumerate(probe_stats_files):
+                f.write('\"'+os.path.basename(class_file)+ '\",\"'+os.path.basename(stats_file)+'\",\"' + str(score[class_index][stats_index]) + '\"\n')
+
+        # class_file_num = len(class_gmms_files)
+        # current_class_file_num = 0
+        # for class_gmm_file in class_gmms_files:
+        #     current_class_file_num += 1
+        #     self.logger.info('Calculating sores ' + str(current_class_file_num) + '/' + str(class_file_num) +  ' for class file ' + class_gmm_file)
+        #     for stats_file in probe_stats_files:
+        #         #self.logger.debug('calculating sore. Class file: ' + class_gmm_file + ' stats file: + stats_file')
+        #         class_gmm = analyze.load_gmm_machine_file(class_gmm_file)
+        #         stats = analyze.load_gmm_stats_file(stats_file)
+        #         score = distance_function([class_gmm], ubm, [stats])[0,0]
+        #
+        #         f.write('\"'+os.path.basename(class_gmm_file)+ '\",\"'+os.path.basename(stats_file)+'\",\"' + str(score) + '\"\n')
+        f.close()
+
     def run(self):
         total_start_time = time.clock()
         #1. Extract and save features from training files
@@ -151,8 +187,34 @@ class ubm_gmm_worker:
             self.logger.info('Generating score file for map_gmm analysis')
             class_gmms_files = analyze.recursive_find_all_files(self.paths.map_gmm_dir, '.hdf5')
             eval_gmm_stats_files = analyze.recursive_find_all_files(self.paths.gmm_stats_eval, '.hdf5')
-            self.calc_scores(class_gmms_files, eval_gmm_stats_files, bob.machine.linear_scoring, ubm,
+            self.calc_scores_fast(class_gmms_files, eval_gmm_stats_files, bob.machine.linear_scoring, ubm,
                                 self.paths.eval_map_gmm_score_file)
+
+
+        #TEST
+
+
+        # self.logger.info('Generating score file for map_gmm analysis')
+        # class_gmms_files = analyze.recursive_find_all_files(self.paths.map_gmm_dir, '.hdf5')
+        # eval_gmm_stats_files = analyze.recursive_find_all_files(self.paths.gmm_stats_eval, '.hdf5')
+        # self.logger.info('Start test run 1')
+        # start_time = time.clock()
+        # self.calc_scores(class_gmms_files, eval_gmm_stats_files, bob.machine.linear_scoring, ubm,
+        #                     self.paths.eval_map_gmm_score_file)
+        # end_time = time.clock()
+        # self.logger.info('End test run 1. Time: ' + str(end_time - start_time))
+        #
+        # self.logger.info('Start test run 2')
+        # start_time = time.clock()
+        # #self.calc_scores2(class_gmms_files, eval_gmm_stats_files, bob.machine.linear_scoring, ubm,
+        # #                    self.paths.eval_map_gmm_score_file)
+        # end_time = time.clock()
+        # self.logger.info('End test run 2. Time: ' + str(end_time - start_time))
+        #TEST END
+
+
+
+
 
         #EVALUATE RESULTS
 
@@ -167,3 +229,4 @@ class ubm_gmm_worker:
         total_end_time = time.clock()
 
         self.logger.info('Total time elapsed: ' + str(total_end_time - total_start_time))
+
