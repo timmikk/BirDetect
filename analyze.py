@@ -491,7 +491,7 @@ def gen_kmeans(training_set, number_of_gaussians):
 
     return kmeans
 
-def gen_ubm(kmeans, training_set):
+def gen_ubm(kmeans, training_set, trainer_convergence_threshold, trainer_max_iterations):
     logger.info('Generating UBM')
     #training_set = numpy.vstack(train_features)
     feature_dimensions = input_size = training_set.shape[1]
@@ -508,6 +508,8 @@ def gen_ubm(kmeans, training_set):
 
     # train the GMM
     trainer = bob.trainer.ML_GMMTrainer()
+    trainer.convergence_threshold = trainer_convergence_threshold
+    trainer.max_iterations = trainer_max_iterations
     trainer.train(ubm, training_set)
 
     return ubm

@@ -34,8 +34,8 @@ def load_parameters(param_file):
     parameters = dict(parameters.items() + new_params.items())
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('run_mode', help='What to do', choices=['ivector', 'ubm-gmm'])
-parser.add_argument('--num_gauss', help='Number of gaussian used in calculations', default=16, type=int)
+parser.add_argument('--run_mode', help='What to do', choices=['ivector', 'ubm-gmm', 'all'], default='all')
+parser.add_argument('--num_gauss', help='Number of gaussian used in calculations', type=int)
 parser.add_argument('--snd_path', help='Location of wav files. Must contain train and eval folders', default='snd')
 parser.add_argument('--dest_path', help='Location where all data is written to', default='dest')
 parser.add_argument('--params_file', help='Parameter file')
@@ -46,79 +46,65 @@ args = parser.parse_args()
 paths = Bunch()
 
 paths.dest = os.path.abspath(args.dest_path)
-
 paths.sound = os.path.abspath(args.snd_path)
-logger.info('sound=' + paths.sound)
-
-paths.train_sounds = os.path.join(paths.sound, 'train')
-logger.info('train_sounds=' + paths.train_sounds)
-paths.eval_sounds = os.path.join(paths.sound, 'eval')
-logger.info('eval_sounds=' + paths.eval_sounds)
-
-
-logger.info('dest=' + paths.dest)
-
-paths.eval_log_file = os.path.join(paths.dest, 'eval.txt')
-
+paths.sounds_train = os.path.join(paths.sound, 'train')
+paths.sounds_eval = os.path.join(paths.sound, 'eval')
 paths.features = os.path.join(paths.dest, 'features')
-logger.info('features=' + paths.features)
-
-paths.train_features = os.path.join(paths.features, 'train')
-logger.info('train_features=' + paths.train_features)
-
-paths.eval_features = os.path.join(paths.features, 'eval')
-logger.info('eval_features=' + paths.eval_features)
-
-paths.mfcc = os.path.join(paths.dest, 'mfcc')
-logger.info('mfcc=' + paths.mfcc)
+paths.features_train = os.path.join(paths.features, 'train')
+paths.features_eval = os.path.join(paths.features, 'eval')
+#paths.mfcc = os.path.join(paths.dest, 'mfcc')
 paths.kmeans_file = os.path.join(paths.dest, 'kmeans.hdf5')
-logger.info('kmeans_file=' + paths.kmeans_file)
 paths.ubm_file = os.path.join(paths.dest, 'ubm.hdf5')
-logger.info('ubm_file=' + paths.ubm_file)
-paths.gmm_features = os.path.join(paths.dest, 'gmm_stats')
-logger.info('gmm_features=' + paths.gmm_features)
-
-paths.gmm_stats_train = os.path.join(paths.gmm_features, 'train')
-logger.info('gmm_train_features=' + paths.gmm_stats_train)
-paths.gmm_stats_eval = os.path.join(paths.gmm_features, 'eval')
-logger.info('gmm_eval_features=' + paths.gmm_stats_eval)
-
-paths.ivec_machine_file = os.path.join(paths.dest, 'tv.hdf5')
-logger.info('ivec_machine_file=' + paths.ivec_machine_file)
-paths.ivec_dir = os.path.join(paths.dest, 'ivectors')
-logger.info('ivec_dir=' + paths.ivec_dir)
-
-paths.gmm_machine_file = os.path.join(paths.dest, 'gmm_machine.hdf5')
-logger.info('gmm_machine_file=' + paths.gmm_machine_file)
-paths.map_gmm_dir = os.path.join(paths.dest, 'map_gmm')
-logger.info('map_gmm_dir=' + paths.map_gmm_dir)
-
-paths.eval_ivector_score_file = os.path.join(paths.dest, 'score-ivector-eval.txt')
-logger.info('eval_ivector_score_file=' + paths.eval_ivector_score_file)
-paths.eval_map_gmm_score_file = os.path.join(paths.dest, 'score-map_gmm-eval.txt')
-logger.info('eval_map_gmm_score_file=' + paths.eval_map_gmm_score_file)
-
-paths.test_roc_eval_map_gmm_file = os.path.join(paths.dest, 'gmm_adapted_roc.png')
-logger.info('test_roc_eval_map_gmm_file=' + paths.test_roc_eval_map_gmm_file)
-paths.test_det_eval_map_gmm_file = os.path.join(paths.dest, 'gmm_adapted_det.png')
-logger.info('test_det_eval_map_gmm_file=' + paths.test_det_eval_map_gmm_file)
-
-paths.test_roc_eval_ivec_file = os.path.join(paths.dest, 'ivec_roc.png')
-logger.info('test_roc_eval_ivec_file=' + paths.test_roc_eval_ivec_file)
-paths.test_det_eval_ivec_file = os.path.join(paths.dest, 'ivec_det.png')
-logger.info('test_det_eval_ivec_file=' + paths.test_det_eval_ivec_file)
-
+paths.gmms = os.path.join(paths.dest, 'gmm_stats')
+paths.gmm_stats_train = os.path.join(paths.gmms, 'train')
+paths.gmm_stats_eval = os.path.join(paths.gmms, 'eval')
+paths.ivec_machine_file = os.path.join(paths.dest, 'ivec_machine.hdf5')
+paths.ivectors_eval = os.path.join(paths.dest, 'ivectors')
+#paths.gmm_machine_file = os.path.join(paths.dest, 'gmm_machine.hdf5')
+paths.class_gmms = os.path.join(paths.dest, 'class_gmms')
+paths.scores_ivec = os.path.join(paths.dest, 'scores-ivec.txt')
+paths.scores_ubm_gmm = os.path.join(paths.dest, 'scores-ubm-gmm.txt')
+paths.eval_roc_ubm_gmm = os.path.join(paths.dest, 'roc-ubm-gmm.png')
+paths.eval_det_ubm_gmm = os.path.join(paths.dest, 'det-ubm-gmm.png')
+paths.eval_roc_ivec = os.path.join(paths.dest, 'roc-ivec.png')
+paths.eval_det_ivec = os.path.join(paths.dest, 'det-ivec.png')
+paths.eval_ivec_log = os.path.join(paths.dest, 'eval-ivec.txt')
+paths.eval_ubm_gmm_log = os.path.join(paths.dest, 'eval-ubm-gmm.txt')
 paths.conf_default_file = os.path.join(os.path.dirname(__file__), 'default.cfg')
+
+
+# logger.info('sound=' + paths.sound)
+# logger.info('train_sounds=' + paths.sounds_train)
+# logger.info('eval_sounds=' + paths.sounds_eval)
+# logger.info('dest=' + paths.dest)
+# logger.info('features=' + paths.features)
+# logger.info('train_features=' + paths.features_train)
+# logger.info('eval_features=' + paths.features_eval)
+# logger.info('mfcc=' + paths.mfcc)
+# logger.info('kmeans_file=' + paths.kmeans_file)
+# logger.info('ubm_file=' + paths.ubm_file)
+# logger.info('gmm_features=' + paths.gmms)
+# logger.info('gmm_train_features=' + paths.gmm_stats_train)
+# logger.info('gmm_eval_features=' + paths.gmm_stats_eval)
+# logger.info('ivec_machine_file=' + paths.ivec_machine_file)
+# logger.info('ivec_dir=' + paths.ivectors_eval)
+# logger.info('gmm_machine_file=' + paths.gmm_machine_file)
+# logger.info('map_gmm_dir=' + paths.class_gmms)
+# logger.info('eval_ivector_score_file=' + paths.eval_ivector_score_file)
+# logger.info('eval_map_gmm_score_file=' + paths.eval_map_gmm_score_file)
+# logger.info('test_roc_eval_map_gmm_file=' + paths.test_roc_eval_map_gmm_file)
+# logger.info('test_det_eval_map_gmm_file=' + paths.test_det_eval_map_gmm_file)
+# logger.info('test_roc_eval_ivec_file=' + paths.test_roc_eval_ivec_file)
+# logger.info('test_det_eval_ivec_file=' + paths.test_det_eval_ivec_file)
+
+#Log all paths
+# for key, value in paths.iteritems():
+#     logger.info( '' + key + '=' + value)
+
+
 
 log_file_locator = lambda *x: os.path.join(paths.dest, *x)
 
-#Load default parameters
-load_parameters(paths.conf_default_file)
-
-if args.params_file is not None:
-    load_parameters(args.params_file)
-
-params = Bunch(parameters)
 
 LOGGING = {
     "version": 1,
@@ -184,21 +170,24 @@ LOGGING = {
 
 
 
-def setup_logging(dest_path, logging_json, default_level=logging.INFO, env_key='LOG_CFG'):
-    """Setup logging configuration
+logging.config.dictConfig(LOGGING)
 
-    """
+logger.info(str(paths))
 
-    if logging_json is not None:
-        #config = json.loads(logging_json)
-        logging.config.dictConfig(logging_json)
-    else:
-        logging.basicConfig(level=default_level)
+logger.info('Loading parameters from ' + paths.conf_default_file)
 
+#Load default parameters
+load_parameters(paths.conf_default_file)
 
+if args.params_file is not None:
+    logger.info('Loading user defined parameters from: ' + str(args.params_file))
+    load_parameters(args.params_file)
 
-info_log_file = os.path.join(paths.dest, 'info.log')
-debug_log_file = os.path.join(paths.dest, 'debug.log')
+params = Bunch(parameters)
+logger.info('Parameters loaded: ' + str(params))
+
+#info_log_file = os.path.join(paths.dest, 'info.log')
+#debug_log_file = os.path.join(paths.dest, 'debug.log')
 # create a file handler
 # console_handler = logging.StreamHandler()
 # console_handler.setLevel(logging.INFO)
@@ -216,18 +205,19 @@ debug_log_file = os.path.join(paths.dest, 'debug.log')
 # logger.addHandler(info_handler)
 # logger.addHandler(debug_handler)
 
-log_conf_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'logging.json')
-setup_logging(paths.dest, LOGGING)
+#log_conf_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'logging.json')
 
-logger.info('Loading parameters from ' + paths.conf_default_file)
-logger.info('Parameters loaded: ' + str(parameters))
 
-logger.info('Other parameters:')
+
 #num_gauss = args.num_gauss #defaults to 16 #19# 128 512
 #logger.info('num_gauss=' + str(num_gauss))
 if(args.num_gauss is not None):
     logger.warning('Overriding number of gaussians (' + str(params.number_of_gaussians) + ' -> ' + str(args.num_gauss) + ')')
     params.number_of_gaussians = args.num_gauss
+
+if(args.run_mode is not None):
+    logger.warning('Overriding run mode (' + str(params.run_mode) + ' -> ' + str(args.run_mode) + ')')
+    params.run_mode = args.run_mode
 #parameters['kmeans_num_gauss'] = num_gauss
 #parameters['gmm_stat_num_gauss'] = num_gauss
 #parameters['gmm_adapted_num_gauss'] = num_gauss
@@ -310,9 +300,9 @@ if(args.num_gauss is not None):
 # logger.info('parameters['ubm_max_iterations']=' + str(parameters['ubm_max_iterations']))
 
 
-if args.run_mode == 'ubm-gmm':
+if params.run_mode == 'ubm-gmm' or params.run_mode == 'all':
     worker = ubmgmm.ubm_gmm_worker(paths, params)
-elif args.run_mode == 'ivector':
+if params.run_mode == 'ivector' or params.run_mode == 'all':
     worker = ivector.ivector_worker(paths, params)
 try:
     worker.run()

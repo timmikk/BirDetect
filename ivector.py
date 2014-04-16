@@ -39,24 +39,24 @@ class ivector_worker:
 
         total_start_time = time.clock()
         #1. Extract and save features from training files
-        if os.path.exists(self.paths.train_features):
-            self.logger.warn('Features are not extracted for train data as folder already exists(' + self.paths.train_features + ').')
+        if os.path.exists(self.paths.features_train):
+            self.logger.warn('Features are not extracted for train data as folder already exists(' + self.paths.features_train + ').')
         else:
             self.logger.info('Extracting mfcc features from train data')
-            self.logger.debug('From ' + self.paths.train_sounds + ' to ' + self.paths.train_features)
-            analyze.recursively_extract_features(self.paths.train_sounds, self.paths.train_features, self.params.mfcc_wl,
+            self.logger.debug('From ' + self.paths.sounds_train + ' to ' + self.paths.features_train)
+            analyze.recursively_extract_features(self.paths.sounds_train, self.paths.features_train, self.params.mfcc_wl,
                                                  self.params.mfcc_ws, self.params.mfcc_nf, self.params.mfcc_nceps,
                                                  self.params.mfcc_fmin, self.params.mfcc_fmax, self.params.mfcc_d_w,
                                                  self.params.mfcc_pre, self.params.mfcc_mel)
 
         #2. Extract and save features from evaluation files
-        if os.path.exists(self.paths.eval_features):
+        if os.path.exists(self.paths.features_eval):
             self.logger.warn(
-                'Features are not extracted for evaluation data as folder already exists (' + self.paths.eval_features + ').')
+                'Features are not extracted for evaluation data as folder already exists (' + self.paths.features_eval + ').')
         else:
             self.logger.info('Extracting mfcc features from evaluation data')
-            self.logger.debug('From ' + self.paths.eval_sounds + ' to ' + self.paths.eval_features)
-            analyze.recursively_extract_features(self.paths.eval_sounds, self.paths.eval_features, self.params.mfcc_wl,
+            self.logger.debug('From ' + self.paths.sounds_eval + ' to ' + self.paths.features_eval)
+            analyze.recursively_extract_features(self.paths.sounds_eval, self.paths.features_eval, self.params.mfcc_wl,
                                                  self.params.mfcc_ws, self.params.mfcc_nf, self.params.mfcc_nceps,
                                                  self.params.mfcc_fmin, self.params.mfcc_fmax, self.params.mfcc_d_w,
                                                  self.params.mfcc_pre, self.params.mfcc_mel)
@@ -64,13 +64,13 @@ class ivector_worker:
         #3. Read training features to array
         self.logger.info('Load train features')
         #analyze.recursive_test_wavs_for_nan(self.paths.sound)
-        #analyze.recursive_test_for_nan(self.paths.train_features)
+        #analyze.recursive_test_for_nan(self.paths.features_train)
 
-        train_features = analyze.recursive_load_mfcc_files(self.paths.train_features)
+        features_train = analyze.recursive_load_mfcc_files(self.paths.features_train)
 
         #4. array is converted to multidimensional ndarray
         self.logger.info('Convert train features array')
-        training_features_set = numpy.vstack(train_features)
+        training_features_set = numpy.vstack(features_train)
 
         #5. Clustering the train data using k-means and save result
         self.logger.info('Train k-means')
@@ -83,7 +83,7 @@ class ivector_worker:
             kmeans = bob.machine.KMeansMachine(kmeans_hdf5)
             self.logger.info('K-Means file loaded')
         else:
-            #kmeans = analyze.train_kmeans_machine(train_features, self.params.kmeans_num_gauss, self.params.kmeans_dim)
+            #kmeans = analyze.train_kmeans_machine(features_train, self.params.kmeans_num_gauss, self.params.kmeans_dim)
             kmeans = analyze.gen_kmeans(training_features_set, self.params.number_of_gaussians)
             self.logger.info('save K-Means to file: ' + self.paths.kmeans_file)
             kmeans.save(bob.io.HDF5File(self.paths.kmeans_file, 'w'))
@@ -105,15 +105,15 @@ class ivector_worker:
             self.logger.info('UBM file loaded')
         else:
             self.logger.info('No UBM file found (' + self.paths.ubm_file + '). New UBM is generated.')
-            #ubm = analyze.train_ubm_gmm_with_features(kmeans, train_features, self.params.ubm_gmm_num_gauss,
+            #ubm = analyze.train_ubm_gmm_with_features(kmeans, features_train, self.params.ubm_gmm_num_gauss,
             #                                          self.params.ubm_gmm_dim, self.params.ubm_convergence_threshold,
             #                                          self.params.ubm_max_iterations)
-            ubm = analyze.gen_ubm(kmeans, training_features_set)
+            ubm = analyze.gen_ubm(kmeans, training_features_set, self.params.ubm_trainer_convergence_threshold, self.params.ubm_trainer_max_iterations)
             #Save ubm
             self.logger.info('Save UBM to file: ' + self.paths.ubm_file)
             ubm.save(bob.io.HDF5File(self.paths.ubm_file, "w"))
 
-        train_features = None
+        features_train = None
         training_features_set = None
         kmeans = None
 
@@ -127,13 +127,13 @@ class ivector_worker:
             self.logger.info('GMM train stats path exists (' + self.paths.gmm_stats_train + ') Skipping... ')
         else:
             self.logger.info('Calculating GMM train stats')
-            analyze.compute_gmm_sufficient_statistics(ubm, self.paths.train_features, self.paths.gmm_stats_train)
+            analyze.compute_gmm_sufficient_statistics(ubm, self.paths.features_train, self.paths.gmm_stats_train)
 
         if os.path.exists(self.paths.gmm_stats_eval):
             self.logger.info('GMM evaluation stats path exists (' + self.paths.gmm_stats_eval + ') Skipping... ')
         else:
             self.logger.info('Calculating GMM evaluation stats')
-            analyze.compute_gmm_sufficient_statistics(ubm, self.paths.eval_features, self.paths.gmm_stats_eval)
+            analyze.compute_gmm_sufficient_statistics(ubm, self.paths.features_eval, self.paths.gmm_stats_eval)
 
         #9. Training TV and Sigma matrices
         self.logger.info('Training ivector machine')
@@ -160,31 +160,31 @@ class ivector_worker:
         #10. Extract i-vectors of the eval set..."
 
         self.logger.info('Extract i-vectors of the evaluation set.')
-        if os.path.exists(self.paths.ivec_dir):
+        if os.path.exists(self.paths.ivectors_eval):
             self.logger.info('Ivectors  for evaluation set found so no ivectors are calculated.')
         else:
             self.logger.info('Calculating ivectors for evaluation set')
-            analyze.extract_i_vectors(self.paths.gmm_stats_eval, self.paths.ivec_dir, ivec_machine)
+            analyze.extract_i_vectors(self.paths.gmm_stats_eval, self.paths.ivectors_eval, ivec_machine)
 
         self.logger.info('Generate score file for ivector comparisons')
-        if os.path.exists(self.paths.eval_ivector_score_file):
+        if os.path.exists(self.paths.scores_ivec):
             self.logger.info(
-                'Score file for ivector analysis already exists in ' + self.paths.eval_ivector_score_file + '. No new score file is generated.')
+                'Score file for ivector analysis already exists in ' + self.paths.scores_ivec + '. No new score file is generated.')
         else:
             self.logger.info('Generating score file for ivector analysis')
-            files = analyze.recursive_find_all_files(self.paths.ivec_dir, '.hdf5')
-            self.gen_score_file(files, self.paths.eval_ivector_score_file, self.paths.ivec_dir)
-            self.logger.info('Score file generated to: ' + self.paths.eval_ivector_score_file)
+            files = analyze.recursive_find_all_files(self.paths.ivectors_eval, '.hdf5')
+            self.gen_score_file(files, self.paths.scores_ivec, self.paths.ivectors_eval)
+            self.logger.info('Score file generated to: ' + self.paths.scores_ivec)
 
         #EVALUATE RESULTS
 
-        evaluate.print_evaluation_log_file(self.paths.eval_log_file, self.params)
+        evaluate.print_evaluation_log_file(self.paths.eval_ivec_log, self.params)
 
         self.logger.info('Evaluating results')
         self.logger.info('Evaluating ivector results')
         self.logger.info('Finding negatives and positives from score file')
-        negatives, positives = evaluate.parse_scores_from_file(self.paths.eval_ivector_score_file)
-        evaluate.evaluate_score_file(negatives, positives, self.paths.test_roc_eval_ivec_file, self.paths.test_det_eval_ivec_file, self.paths.eval_log_file)
+        negatives, positives = evaluate.parse_scores_from_file(self.paths.scores_ivec)
+        evaluate.evaluate_score_file(negatives, positives, self.paths.eval_roc_ivec, self.paths.eval_det_ivec, self.paths.eval_ivec_log)
 
         total_end_time = time.clock()
 
