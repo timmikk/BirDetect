@@ -1,6 +1,8 @@
+# coding=utf-8
+
 import os
 
-__author__ = 'timo'
+__author__ = 'Timo Mikkilä'
 
 """
 Compute and display a spectrogram.
@@ -15,7 +17,6 @@ import matplotlib.pyplot as plt
 import scipy.io.wavfile
 import numpy as np
 import bob
-import sys
 import logging
 
 import argparse
@@ -716,34 +717,3 @@ def recursively_split_wav_files(path, dest, invalid_dest):
 
 recursively_split_wav_files(src_abs_path, dest_abs_path, invalid_splits_path)
 recursively_plot_wav_files(src_abs_path, plots_path)
-
-#show_energy_plots(sys.argv[1:])
-
-
-#wav_file = os.path.abspath(str(sys.argv[1]))
-#src_path = os.path.abspath(str(sys.argv[1]))
-#dest_path = os.path.abspath(str(sys.argv[2]))
-#invalid_dest_path = os.path.abspath(str(sys.argv[3]))
-#pdf_file = os.path.abspath(str(sys.argv[4]))
-#img_file = os.path.abspath(str(sys.argv[5]))
-
-
-
-
-
-#check_or_make_dir(img_file)
-
-
-#recursively_split_wav_files(src_path, dest_path, invalid_dest_path)
-#recursively_plot_wav_files(src_path, img_file)
-
-#(rate, signal) = scipy.io.wavfile.read(str(wav_file))
-#(signal, rate) = load_wav_as_mono(wav_file)
-#scipy.io.wavfile.write('/home/timo/temp/testi.wav', rate, signal)
-
-#(rate, signal) = scipy.io.wavfile.read(str('/Tavara/Ohjelmointi/BirDetect/birds/data/snd/train/Bird_Sounds_of_Europe_and_North-West-Africa/accipiter_nisus-split_4.wav'))
-
-
-#valid = validate_signal(signal, rate)
-
-#print 'valid=' + str(valid)

@@ -1,11 +1,13 @@
+# coding=utf-8
 import bob
 import numpy
 import os
-import scipy
-import re
-import utils
 import logging
 from collections import defaultdict
+
+import utils
+
+__author__ = 'Timo Mikkilä'
 
 #logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)

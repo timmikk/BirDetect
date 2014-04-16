@@ -1,13 +1,17 @@
+# coding=utf-8
 import logging
 import numpy
 import bob
 import os
 import time
-import analyze
+
 from bunch import Bunch
+
+import analyze
 import evaluate
 import utils
 
+__author__ = 'Timo Mikkilä'
 
 class ubm_gmm_worker:
     logger = logging.getLogger(__name__)

@@ -1,12 +1,16 @@
 # coding=utf-8
 import os
 import re
-import argparse
 import logging
 import bob
 import numpy
+
 import matplotlib
+
 import utils
+
+__author__ = 'Timo Mikkilä'
+
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use('Agg')
 

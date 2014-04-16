@@ -1,15 +1,13 @@
 __author__ = 'timo'
 
 import bob
-import os
-import utils
 import scipy.io.wavfile
 import numpy
-from numpy.linalg import *
+
 import matplotlib.pyplot as plt
+
 #from matplotlib.pyplot import *
 from scipy import *
-from mpl_toolkits.mplot3d import Axes3D
 
 
 

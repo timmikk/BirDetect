@@ -1,5 +1,8 @@
+# coding=utf-8
 import re
 import os
+
+__author__ = 'Timo Mikkilä'
 
 def read_names_from_file(name_file, reg_exp):
     names = {}
