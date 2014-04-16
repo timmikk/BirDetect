@@ -17,11 +17,16 @@ class ubm_gmm_worker:
         self.params = params
 
     def calc_scores(self, class_gmms_files, probe_stats_files, distance_function, ubm, score_file):
-
+        self.logger.debug('calc_scores')
         f = open(score_file, 'w')
 
+        class_file_num = len(class_gmms_files)
+        current_class_file_num = 0
         for class_gmm_file in class_gmms_files:
+            current_class_file_num += 1
+            self.logger.info('Calculating sores ' + str(current_class_file_num) + '/' + str(class_file_num) +  ' for class file ' + class_gmm_file)
             for stats_file in probe_stats_files:
+                #self.logger.debug('calculating sore. Class file: ' + class_gmm_file + ' stats file: + stats_file')
                 class_gmm = analyze.load_gmm_machine_file(class_gmm_file)
                 stats = analyze.load_gmm_stats_file(stats_file)
                 score = distance_function([class_gmm], ubm, [stats])[0,0]
@@ -146,7 +151,7 @@ class ubm_gmm_worker:
             self.logger.info('Generating score file for map_gmm analysis')
             class_gmms_files = analyze.recursive_find_all_files(self.paths.map_gmm_dir, '.hdf5')
             eval_gmm_stats_files = analyze.recursive_find_all_files(self.paths.gmm_stats_eval, '.hdf5')
-            analyze.calc_scores(class_gmms_files, eval_gmm_stats_files, bob.machine.linear_scoring, ubm,
+            self.calc_scores(class_gmms_files, eval_gmm_stats_files, bob.machine.linear_scoring, ubm,
                                 self.paths.eval_map_gmm_score_file)
 
         #EVALUATE RESULTS
