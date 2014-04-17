@@ -109,6 +109,7 @@ class ubm_gmm_worker:
         #4. array is converted to multidimensional ndarray
         self.logger.info('Convert train features array')
         training_features_set = numpy.vstack(features_train)
+        features_train = None
 
         #5. Clustering the train data using k-means and save result
         self.logger.info('Train k-means')
@@ -154,7 +155,6 @@ class ubm_gmm_worker:
         self.logger.info('Compute GMM sufficient statistics for both training and eval sets')
         #8. Compute GMM sufficient statistics for both training and eval sets
 
-        features_train = None
         training_features_set = None
         kmeans = None
 

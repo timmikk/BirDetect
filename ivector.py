@@ -73,6 +73,7 @@ class ivector_worker:
         #4. array is converted to multidimensional ndarray
         self.logger.info('Convert train features array')
         training_features_set = numpy.vstack(features_train)
+        features_train = None
 
         #5. Clustering the train data using k-means and save result
         self.logger.info('Train k-means')
@@ -115,7 +116,7 @@ class ivector_worker:
             self.logger.info('Save UBM to file: ' + self.paths.ubm_file)
             ubm.save(bob.io.HDF5File(self.paths.ubm_file, "w"))
 
-        features_train = None
+
         training_features_set = None
         kmeans = None
 

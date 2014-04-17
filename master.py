@@ -154,9 +154,13 @@ if(args.run_mode is not None):
 
 if params.run_mode == 'ubm-gmm' or params.run_mode == 'all':
     worker = ubmgmm.ubm_gmm_worker(paths, params)
+    try:
+        worker.run()
+    except:
+        logging.exception('Something went wrong')
 if params.run_mode == 'ivector' or params.run_mode == 'all':
     worker = ivector.ivector_worker(paths, params)
-try:
-    worker.run()
-except:
-    logging.exception('Something went wrong')
+    try:
+        worker.run()
+    except:
+        logging.exception('Something went wrong')
