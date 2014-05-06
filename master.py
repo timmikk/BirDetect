@@ -10,20 +10,23 @@ from bunch import Bunch
 import ivector
 import ubmgmm
 
+
 __author__ = 'Timo Mikkilä'
 
 logger = logging.getLogger(__name__)
 
 parameters = {}
 
+
 def load_parameters(param_file):
     if not os.path.isfile(param_file):
         logger.error('Error no such parameter file:' + param_file)
         exit(128)
-    f=open(param_file)
+    f = open(param_file)
     global parameters
     new_params = yaml.load(f)
     parameters = dict(parameters.items() + new_params.items())
+
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--run_mode', help='What to do', choices=['ivector', 'ubm-gmm', 'all'], default='all')
@@ -31,7 +34,6 @@ parser.add_argument('--num_gauss', help='Number of gaussian used in calculations
 parser.add_argument('--snd_path', help='Location of wav files. Must contain train and eval folders', default='snd')
 parser.add_argument('--dest_path', help='Location where all data is written to', default='dest')
 parser.add_argument('--params_file', help='Parameter file')
-
 
 args = parser.parse_args()
 
@@ -126,8 +128,6 @@ LOGGING = {
     }
 }
 
-
-
 logging.config.dictConfig(LOGGING)
 
 logger.info(str(paths))
@@ -144,11 +144,12 @@ if args.params_file is not None:
 params = Bunch(parameters)
 logger.info('Parameters loaded: ' + str(params))
 
-if(args.num_gauss is not None):
-    logger.warning('Overriding number of gaussians (' + str(params.number_of_gaussians) + ' -> ' + str(args.num_gauss) + ')')
+if (args.num_gauss is not None):
+    logger.warning(
+        'Overriding number of gaussians (' + str(params.number_of_gaussians) + ' -> ' + str(args.num_gauss) + ')')
     params.number_of_gaussians = args.num_gauss
 
-if(args.run_mode is not None):
+if (args.run_mode is not None):
     logger.warning('Overriding run mode (' + str(params.run_mode) + ' -> ' + str(args.run_mode) + ')')
     params.run_mode = args.run_mode
 

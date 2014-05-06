@@ -27,70 +27,75 @@ logger = logging.getLogger(__name__)
 
 bird_name_reg_exp = '^(?P<name>[a-zA-Z_]+)[-_\d]*.*\.hdf5'
 
+
 def ensure_dir(dirname):
-  """ Creates the directory dirname if it does not already exist,
-      taking into account concurrent 'creation' on the grid.
-      An exception is thrown if a file (rather than a directory) already 
-      exists. """
-  try:
-    # Tries to create the directory
-    os.makedirs(dirname)
-  except OSError:
-    # Check that the directory exists
-    if os.path.isdir(dirname): pass
-    else: raise
+    """ Creates the directory dirname if it does not already exist,
+        taking into account concurrent 'creation' on the grid.
+        An exception is thrown if a file (rather than a directory) already
+        exists. """
+    try:
+        # Tries to create the directory
+        os.makedirs(dirname)
+    except OSError:
+        # Check that the directory exists
+        if os.path.isdir(dirname):
+            pass
+        else:
+            raise
 
 
 def read(filename):
-  """Read audio file"""
-  import scipy.io.wavfile
-  rate, audio = scipy.io.wavfile.read(filename)
-  
-  # We consider there is only 1 channel in the audio file => data[0]
-  data= numpy.cast['float'](audio) # pow(2,15) is used to get the same native format as for scipy.io.wavfile.read
-  return [rate,data]
+    """Read audio file"""
+    import scipy.io.wavfile
 
+    rate, audio = scipy.io.wavfile.read(filename)
+
+    # We consider there is only 1 channel in the audio file => data[0]
+    data = numpy.cast['float'](audio)  # pow(2,15) is used to get the same native format as for scipy.io.wavfile.read
+    return [rate, data]
 
 
 def normalize_features(feature):
-  """Applies a unit mean and variance normalization to the features"""
+    """Applies a unit mean and variance normalization to the features"""
 
-  # Initializes variables
-  n_samples = feature.shape[0]
-  length = feature.shape[1]
-  
-  mean = numpy.ndarray((length,), 'float64')
-  std = numpy.ndarray((length,), 'float64')
+    # Initializes variables
+    n_samples = feature.shape[0]
+    length = feature.shape[1]
 
-  mean.fill(0)
-  std.fill(0)
+    mean = numpy.ndarray((length,), 'float64')
+    std = numpy.ndarray((length,), 'float64')
 
-  # Computes mean and variance
-  for array in feature:
-    x = array.astype('float64')
-    mean += x
-    std += (x ** 2)
+    mean.fill(0)
+    std.fill(0)
 
-  mean /= n_samples
-  std /= n_samples
-  std -= (mean ** 2)
-  std = std ** 0.5 
-  normalized = numpy.ndarray(shape=(n_samples,mean.shape[0]), dtype=numpy.float64)
-    
-  for i in range (0, n_samples):
-    normalized[i,:] = (feature[i]-mean) / std 
-  return normalized
+    # Computes mean and variance
+    for array in feature:
+        x = array.astype('float64')
+        mean += x
+        std += (x ** 2)
+
+    mean /= n_samples
+    std /= n_samples
+    std -= (mean ** 2)
+    std = std ** 0.5
+    normalized = numpy.ndarray(shape=(n_samples, mean.shape[0]), dtype=numpy.float64)
+
+    for i in range(0, n_samples):
+        normalized[i, :] = (feature[i] - mean) / std
+    return normalized
+
 
 def cosine_score(a, b, unit_vec=False):
     if len(a) != len(b):
         raise ValueError, "a and b must be same length"
-    numerator = sum(tup[0] * tup[1] for tup in izip(a,b))
+    numerator = sum(tup[0] * tup[1] for tup in izip(a, b))
     if unit_vec:
-      return numerator
+        return numerator
     else:
-      denoma = sum(avalue ** 2 for avalue in a)
-      denomb = sum(bvalue ** 2 for bvalue in b)
-      return numerator / (numpy.sqrt(denoma)*numpy.sqrt(denomb))
+        denoma = sum(avalue ** 2 for avalue in a)
+        denomb = sum(bvalue ** 2 for bvalue in b)
+        return numerator / (numpy.sqrt(denoma) * numpy.sqrt(denomb))
+
 
 def is_wav_file(file):
     if not os.path.isfile(file):
@@ -99,12 +104,14 @@ def is_wav_file(file):
     file_ext = os.path.splitext(filename)[1]
     return file_ext.lower() == '.wav'
 
+
 def is_hdf5_file(file):
     if not os.path.isfile(file):
         return False
     filename = os.path.basename(file)
     file_ext = os.path.splitext(filename)[1]
     return file_ext.lower() == '.hdf5'
+
 
 def file_has_extension(file, ext):
     if not os.path.isfile(file):
@@ -113,10 +120,12 @@ def file_has_extension(file, ext):
     file_ext = os.path.splitext(filename)[1]
     return file_ext.lower() == ext
 
+
 def strip_filename(filename):
     filename = os.path.basename(filename)
     filename_wo_ext = os.path.splitext(filename)[0]
     return filename_wo_ext
+
 
 def load_wav_as_mono(wav_file):
     #logger.debug('Entering in load_wav_as_mono')
@@ -126,16 +135,15 @@ def load_wav_as_mono(wav_file):
         signal = signal[:, 0]
     #    logger.debug('Loaded WAV file: signal size = ' + str(signal.shape) + ' rate = ' + str(rate) + ' length in ms = ')# + str(signal.shape[1] / rate))
     return rate, signal
-    
+
 
 def get_bird_name_from_file_name(filename):
     filename = os.path.basename(filename)
 
-
     prog = re.compile(bird_name_reg_exp)
     matchObj = prog.match(filename)
     birdname = matchObj.group('name')
-    if(birdname is None):
+    if (birdname is None):
         logger.error('Cannot read name from file name: ' + filename)
         return None
     logger.debug('Bird name from ' + filename + ' = ' + birdname)

@@ -14,6 +14,7 @@ import evaluate
 class ivector_worker:
     logger = logging.getLogger(__name__)
     paths = Bunch()
+
     def __init__(self, paths, params):
         self.paths = paths
         self.params = params
@@ -33,7 +34,8 @@ class ivector_worker:
                 score = numpy.dot(f1_loaded, f2_loaded)
 
                 #score = utils.cosine_score(f1_loaded, f2_loaded)
-                f.write('\"'+f1[len(dest_dir)+1:] + '\",\"' + f2[len(dest_dir)+1:] + '\",\"' + str(score) + '\"\n')
+                f.write(
+                    '\"' + f1[len(dest_dir) + 1:] + '\",\"' + f2[len(dest_dir) + 1:] + '\",\"' + str(score) + '\"\n')
 
         f.close()
 
@@ -42,11 +44,13 @@ class ivector_worker:
         total_start_time = time.clock()
         #1. Extract and save features from training files
         if os.path.exists(self.paths.features_train):
-            self.logger.warn('Features are not extracted for train data as folder already exists(' + self.paths.features_train + ').')
+            self.logger.warn(
+                'Features are not extracted for train data as folder already exists(' + self.paths.features_train + ').')
         else:
             self.logger.info('Extracting mfcc features from train data')
             self.logger.debug('From ' + self.paths.sounds_train + ' to ' + self.paths.features_train)
-            analyze.recursively_extract_features(self.paths.sounds_train, self.paths.features_train, self.params.mfcc_wl,
+            analyze.recursively_extract_features(self.paths.sounds_train, self.paths.features_train,
+                                                 self.params.mfcc_wl,
                                                  self.params.mfcc_ws, self.params.mfcc_nf, self.params.mfcc_nceps,
                                                  self.params.mfcc_fmin, self.params.mfcc_fmax, self.params.mfcc_d_w,
                                                  self.params.mfcc_pre, self.params.mfcc_mel)
@@ -111,11 +115,11 @@ class ivector_worker:
             #ubm = analyze.train_ubm_gmm_with_features(kmeans, features_train, self.params.ubm_gmm_num_gauss,
             #                                          self.params.ubm_gmm_dim, self.params.ubm_convergence_threshold,
             #                                          self.params.ubm_max_iterations)
-            ubm = analyze.gen_ubm(kmeans, training_features_set, self.params.ubm_trainer_convergence_threshold, self.params.ubm_trainer_max_iterations)
+            ubm = analyze.gen_ubm(kmeans, training_features_set, self.params.ubm_trainer_convergence_threshold,
+                                  self.params.ubm_trainer_max_iterations)
             #Save ubm
             self.logger.info('Save UBM to file: ' + self.paths.ubm_file)
             ubm.save(bob.io.HDF5File(self.paths.ubm_file, "w"))
-
 
         training_features_set = None
         kmeans = None
@@ -145,7 +149,8 @@ class ivector_worker:
         ivec_machine = None
 
         if os.path.isfile(self.paths.ivec_machine_file):
-            self.logger.info('Ivector machine file exists (' + self.paths.ivec_machine_file + '). No new ivector machine is generated.')
+            self.logger.info(
+                'Ivector machine file exists (' + self.paths.ivec_machine_file + '). No new ivector machine is generated.')
             tv_hdf5 = bob.io.HDF5File(self.paths.ivec_machine_file)
             ivec_machine = bob.machine.IVectorMachine(tv_hdf5)
             self.logger.info('Ivector machine loaded')
@@ -187,7 +192,8 @@ class ivector_worker:
         self.logger.info('Evaluating ivector results')
         self.logger.info('Finding negatives and positives from score file')
         negatives, positives = evaluate.parse_scores_from_file(self.paths.scores_ivec)
-        evaluate.evaluate_score_file(negatives, positives, self.paths.eval_roc_ivec, self.paths.eval_det_ivec, self.paths.eval_ivec_log)
+        evaluate.evaluate_score_file(negatives, positives, self.paths.eval_roc_ivec, self.paths.eval_det_ivec,
+                                     self.paths.eval_ivec_log)
 
         total_end_time = time.clock()
 

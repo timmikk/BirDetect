@@ -7,6 +7,7 @@ from collections import defaultdict
 
 import utils
 
+
 __author__ = 'Timo Mikkilä'
 
 #logging.basicConfig(level=logging.DEBUG)
@@ -38,38 +39,39 @@ current_dir = os.getcwd()
 
 # Feature extraction
 def feature_extraction(audio_file, wl=20, ws=10, nf=24, nceps=19, fmin=0., fmax=4000., d_w=2, pre=0.97, mel=True):
-  # Parameters used to extract MFCC (These can be defined in a separate configuration file)
-  # wl = 20 # The window length in milliseconds
-  # ws = 10 # The window shift of the in milliseconds
-  # nf = 24 # The number of filter bands
-  # nceps = 19 # The number of cepstral coefficients
-  # fmin = 0. # The minimal frequency of the filter bank
-  # fmax = 4000. # The maximal frequency of the filter bank
-  # d_w = 2 # The delta value used to compute 1st and 2nd derivatives
-  # pre = 0.97 # The coefficient used for the pre-emphasis
-  # mel = True # Tell whether MFCC or LFCC are extracted
+    # Parameters used to extract MFCC (These can be defined in a separate configuration file)
+    # wl = 20 # The window length in milliseconds
+    # ws = 10 # The window shift of the in milliseconds
+    # nf = 24 # The number of filter bands
+    # nceps = 19 # The number of cepstral coefficients
+    # fmin = 0. # The minimal frequency of the filter bank
+    # fmax = 4000. # The maximal frequency of the filter bank
+    # d_w = 2 # The delta value used to compute 1st and 2nd derivatives
+    # pre = 0.97 # The coefficient used for the pre-emphasis
+    # mel = True # Tell whether MFCC or LFCC are extracted
 
-  # We could also add 1st and 2nd derivatives by activating their flags!
+    # We could also add 1st and 2nd derivatives by activating their flags!
 
-  # read the audio file
-  #(rate, signal) = utils.read(audio_file)
-  (rate, signal) = utils.load_wav_as_mono(audio_file)
+    # read the audio file
+    #(rate, signal) = utils.read(audio_file)
+    (rate, signal) = utils.load_wav_as_mono(audio_file)
 
-  # extract MFCCsu
-  ceps = bob.ap.Ceps(rate, wl, ws, nf, nceps, fmin, fmax, d_w, pre, mel)
+    # extract MFCCsu
+    ceps = bob.ap.Ceps(rate, wl, ws, nf, nceps, fmin, fmax, d_w, pre, mel)
 
-  #Convert signal to float array
-  signal = numpy.cast['float'](signal)
-  mfcc = ceps(signal)
+    #Convert signal to float array
+    signal = numpy.cast['float'](signal)
+    mfcc = ceps(signal)
 
-  # let's just normalize them using this helper function
-  # This will reduce the effect of the channel
-  mfcc = utils.normalize_features(mfcc)
+    # let's just normalize them using this helper function
+    # This will reduce the effect of the channel
+    mfcc = utils.normalize_features(mfcc)
 
-  return mfcc
+    return mfcc
 
 
-def recursively_extract_features(path, dest_dir, wl=20, ws=10, nf=24, nceps=19, fmin=0., fmax=4000., d_w=2, pre = 0.97, mel=True):
+def recursively_extract_features(path, dest_dir, wl=20, ws=10, nf=24, nceps=19, fmin=0., fmax=4000., d_w=2, pre=0.97,
+                                 mel=True):
     for f in os.listdir(path):
         f_location = os.path.join(path, f)
         if utils.is_wav_file(f_location):
@@ -118,6 +120,7 @@ def recursive_load(path, file_validator, loader):
 
     return data
 
+
 def test_array_for_nan(array):
     for v in array:
         if type(v) is numpy.ndarray:
@@ -127,11 +130,10 @@ def test_array_for_nan(array):
                 print 'Contains NAN: ' + str(v)
 
             if numpy.isinf(v).any():
-               print 'Contains INF: ' + str(v)
+                print 'Contains INF: ' + str(v)
 
 
 def recursive_test_for_nan(path):
-
     for f in os.listdir(path):
         f_location = os.path.join(path, f)
         if utils.is_hdf5_file(f_location):
@@ -144,10 +146,10 @@ def recursive_test_for_nan(path):
             if numpy.isinf(feature).any():
                 print 'Contains INF: ' + f_location
 
-            #for dim in feature:
-            #    for v in dim:
-            #        if numpy.isnan(v):
-            #            print 'Contains NAN: ' + f_location
+                #for dim in feature:
+                #    for v in dim:
+                #        if numpy.isnan(v):
+                #            print 'Contains NAN: ' + f_location
 
 
         elif os.path.isdir(f_location):
@@ -159,14 +161,13 @@ def recursive_test_for_nan(path):
             logger.info('Unknown file type: ' + str(f_location))
             continue
 
-def recursive_test_wavs_for_nan(path):
 
+def recursive_test_wavs_for_nan(path):
     for f in os.listdir(path):
         f_location = os.path.join(path, f)
         if utils.is_wav_file(f_location):
             #logger.debug('Loading: ' + f_location)
             rate, feature = utils.load_wav_as_mono(f_location)
-
 
             if numpy.isnan(feature).any():
                 print 'Contains NAN: ' + f_location
@@ -174,10 +175,10 @@ def recursive_test_wavs_for_nan(path):
             if numpy.isinf(feature).any():
                 print 'Contains INF: ' + f_location
 
-            #for dim in feature:
-            #    for v in dim:
-            #        if numpy.isnan(v):
-            #            print 'Contains NAN: ' + f_location
+                #for dim in feature:
+                #    for v in dim:
+                #        if numpy.isnan(v):
+                #            print 'Contains NAN: ' + f_location
 
 
         elif os.path.isdir(f_location):
@@ -189,6 +190,7 @@ def recursive_test_wavs_for_nan(path):
             logger.info('Unknown file type: ' + str(f_location))
             continue
 
+
 def load_mfcc_files(files):
     features = []
     for f in files:
@@ -198,32 +200,12 @@ def load_mfcc_files(files):
 
     return features
 
+
 def recursive_load_mfcc_files(path):
     return recursive_load(path, utils.is_hdf5_file, bob.io.load)
 
-    # train_features = []
-    #
-    # for f in os.listdir(path):
-    #     f_location = os.path.join(path, f)
-    #     if utils.is_mfcc_file(f_location):
-    #         logger.debug('Load mfcc: ' + f_location)
-    #         feature = bob.io.load(f_location)
-    #         train_features.append(feature)
-    #
-    #
-    #     elif os.path.isdir(f_location):
-    #         logger.debug('Load mfcc: ' + f_location)
-    #         new_path = os.path.join(path, f)
-    #         recursive_load_mfcc_files(new_path)
-    #
-    #     else:
-    #         logger.info('Unknown file type: ' + str(f_location))
-    #         continue
-    #
-    # return train_features
 
 def train_kmeans_machine(train_features, num_gauss, dim):
-
     #dim = train_features.shape[1]
     kmeans_trainer = bob.trainer.KMeansTrainer()
     kmeans = bob.machine.KMeansMachine(num_gauss, dim)
@@ -231,7 +213,7 @@ def train_kmeans_machine(train_features, num_gauss, dim):
     return kmeans
 
 
-def train_ubm_gmm_with_features(kmeans, train_features, num_gauss, dim, convergence_threshold = 1e-4, max_iterations=10):
+def train_ubm_gmm_with_features(kmeans, train_features, num_gauss, dim, convergence_threshold=1e-4, max_iterations=10):
     #dim = train_features.shape[1]
 
     #Create universal background model
@@ -247,6 +229,7 @@ def train_ubm_gmm_with_features(kmeans, train_features, num_gauss, dim, converge
     ubm_trainer.train(ubm, train_features)
 
     return ubm
+
 
 def recursive_find_all_files(path, extension):
     logger.debug('Recursively list all files from ' + path + ' with extension ' + extension)
@@ -269,6 +252,7 @@ def recursive_find_all_files(path, extension):
     logger.debug('Found ' + str(len(files)) + ' files')
     return files
 
+
 def compute_gmm_sufficient_statistics(ubm, src_dir, dest_dir):
     for f in os.listdir(src_dir):
         f_location = os.path.join(src_dir, f)
@@ -287,7 +271,7 @@ def compute_gmm_sufficient_statistics(ubm, src_dir, dest_dir):
             utils.ensure_dir(dest_dir)
 
             gmm_stats.save(bob.io.HDF5File(dest_file, 'w'))
-            logger.debug( 'savin gmm_stats to ' + dest_file)
+            logger.debug('savin gmm_stats to ' + dest_file)
 
 
         elif os.path.isdir(f_location):
@@ -299,17 +283,22 @@ def compute_gmm_sufficient_statistics(ubm, src_dir, dest_dir):
             logger.info('Unknown file type: ' + str(f_location))
             continue
 
+
 def load_gmm_stats_file(file):
     return bob.machine.GMMStats(bob.io.HDF5File(file))
+
 
 def load_gmm_machine_file(file):
     return bob.machine.GMMMachine(bob.io.HDF5File(file))
 
+
 def recursive_load_gmm_stats(gmm_stats_path):
     return recursive_load(gmm_stats_path, utils.is_hdf5_file, load_gmm_stats_file)
 
+
 def recursive_load_gmm_machines(gmm_machines_path):
     return recursive_load(gmm_machines_path, utils.is_hdf5_file, load_gmm_machine_file)
+
 
 def gen_ivec_machine(gmm_train_stats, ubm, iv_dim=None, variance_treshold=1e-5, max_iterations=10, update_sigma=True):
     if iv_dim is None:
@@ -324,6 +313,7 @@ def gen_ivec_machine(gmm_train_stats, ubm, iv_dim=None, variance_treshold=1e-5, 
 
     return ivec_machine
 
+
 def gmm_stats_to_ivec(gmm_stats_file, ivec_file, ivec_machine):
     # load the GMM stats file
     gmm_stats = bob.machine.GMMStats(bob.io.HDF5File(gmm_stats_file))
@@ -337,101 +327,104 @@ def gmm_stats_to_ivec(gmm_stats_file, ivec_file, ivec_machine):
 
 def extract_i_vectors(gmm_stats_path, ivec_dir, ivec_machine):
     for f in os.listdir(gmm_stats_path):
-            f_location = os.path.join(gmm_stats_path, f)
-            logger.debug('extract_i_vectors: ' + f_location)
+        f_location = os.path.join(gmm_stats_path, f)
+        logger.debug('extract_i_vectors: ' + f_location)
 
-            if utils.is_hdf5_file(f_location):
+        if utils.is_hdf5_file(f_location):
 
-                stripped_filename = utils.strip_filename(f)
-                dest_file = os.path.join(ivec_dir, stripped_filename)
-                dest_file += '.hdf5'
+            stripped_filename = utils.strip_filename(f)
+            dest_file = os.path.join(ivec_dir, stripped_filename)
+            dest_file += '.hdf5'
 
-                utils.ensure_dir(ivec_dir)
+            utils.ensure_dir(ivec_dir)
 
-                gmm_stats_to_ivec(f_location, dest_file, ivec_machine)
+            gmm_stats_to_ivec(f_location, dest_file, ivec_machine)
 
-                logger.debug('saving ivec ' + dest_file)
+            logger.debug('saving ivec ' + dest_file)
 
 
-            elif os.path.isdir(f_location):
-                new_path = os.path.join(gmm_stats_path, f)
-                new_dest_dir = os.path.join(ivec_dir, f)
-                extract_i_vectors(new_path, new_dest_dir, ivec_machine)
+        elif os.path.isdir(f_location):
+            new_path = os.path.join(gmm_stats_path, f)
+            new_dest_dir = os.path.join(ivec_dir, f)
+            extract_i_vectors(new_path, new_dest_dir, ivec_machine)
 
-            else:
-                logger.info('Unknown file type: ' + str(f_location))
-                continue
+        else:
+            logger.info('Unknown file type: ' + str(f_location))
+            continue
+
 
 def map_gmm_machine_analysis(features_path, map_gmm_dir, map_gmm_machine):
     for f in os.listdir(features_path):
-            f_location = os.path.join(features_path, f)
-            logger.debug('running map gmm machine for: ' + f_location)
+        f_location = os.path.join(features_path, f)
+        logger.debug('running map gmm machine for: ' + f_location)
 
-            if utils.is_hdf5_file(f_location):
+        if utils.is_hdf5_file(f_location):
 
-                stripped_filename = utils.strip_filename(f)
-                dest_file = os.path.join(map_gmm_dir, stripped_filename)
-                dest_file += '.hdf5'
+            stripped_filename = utils.strip_filename(f)
+            dest_file = os.path.join(map_gmm_dir, stripped_filename)
+            dest_file += '.hdf5'
 
-                utils.ensure_dir(map_gmm_dir)
+            utils.ensure_dir(map_gmm_dir)
 
-                # load the GMM stats file
-                #gmm_stats = bob.machine.GMMStats(bob.io.HDF5File(f_location))
-                feature = bob.io.load(f_location)
+            # load the GMM stats file
+            #gmm_stats = bob.machine.GMMStats(bob.io.HDF5File(f_location))
+            feature = bob.io.load(f_location)
 
-                # extract i-vector
-                logger.debug('gmm_stats type ' + str(type(feature)))
-                #response = map_gmm_machine.forward(feature)
-                response = map_gmm_machine(feature)
+            # extract i-vector
+            logger.debug('gmm_stats type ' + str(type(feature)))
+            #response = map_gmm_machine.forward(feature)
+            response = map_gmm_machine(feature)
 
-                # save them!
-                bob.io.save(response, dest_file)
+            # save them!
+            bob.io.save(response, dest_file)
 
-                logger.debug('saving map gmm response ' + dest_file)
+            logger.debug('saving map gmm response ' + dest_file)
 
 
-            elif os.path.isdir(f_location):
-                new_path = os.path.join(features_path, f)
-                new_dest_dir = os.path.join(map_gmm_dir, f)
-                map_gmm_machine_analysis(new_path, new_dest_dir, map_gmm_machine)
+        elif os.path.isdir(f_location):
+            new_path = os.path.join(features_path, f)
+            new_dest_dir = os.path.join(map_gmm_dir, f)
+            map_gmm_machine_analysis(new_path, new_dest_dir, map_gmm_machine)
 
-            else:
-                logger.info('Unknown file type: ' + str(f_location))
-                continue
+        else:
+            logger.info('Unknown file type: ' + str(f_location))
+            continue
+
 
 def recursive_execute_gmms_on_machine(gmm_stats_path, dest_path, machine):
     for f in os.listdir(gmm_stats_path):
-            gmm_stats_file = os.path.join(gmm_stats_path, f)
-            logger.debug('extract_i_vectors: ' + gmm_stats_file)
+        gmm_stats_file = os.path.join(gmm_stats_path, f)
+        logger.debug('extract_i_vectors: ' + gmm_stats_file)
 
-            if utils.is_hdf5_file(gmm_stats_file):
+        if utils.is_hdf5_file(gmm_stats_file):
 
-                stripped_filename = utils.strip_filename(f)
-                dest_file = os.path.join(dest_path, stripped_filename)
-                dest_file += '.hdf5'
+            stripped_filename = utils.strip_filename(f)
+            dest_file = os.path.join(dest_path, stripped_filename)
+            dest_file += '.hdf5'
 
-                utils.ensure_dir(dest_path)
+            utils.ensure_dir(dest_path)
 
-                # load the GMM stats file
-                gmm_stats = bob.machine.GMMStats(bob.io.HDF5File(gmm_stats_file))
+            # load the GMM stats file
+            gmm_stats = bob.machine.GMMStats(bob.io.HDF5File(gmm_stats_file))
 
-                # extract i-vector
-                output = machine.forward(gmm_stats)
+            # extract i-vector
+            output = machine.forward(gmm_stats)
 
-                # save them!
-                bob.io.save(output, dest_file)
+            # save them!
+            bob.io.save(output, dest_file)
 
-                print 'savin ivec ' + dest_file
+            print 'savin ivec ' + dest_file
 
 
-            elif os.path.isdir(gmm_stats_file):
-                new_path = os.path.join(gmm_stats_path, f)
-                new_dest_dir = os.path.join(dest_path, f)
-                extract_i_vectors(new_path, new_dest_dir, machine)
+        elif os.path.isdir(gmm_stats_file):
+            new_path = os.path.join(gmm_stats_path, f)
+            new_dest_dir = os.path.join(dest_path, f)
+            extract_i_vectors(new_path, new_dest_dir, machine)
 
-            else:
-                logger.info('Unknown file type: ' + str(gmm_stats_file))
-                continue
+        else:
+            logger.info('Unknown file type: ' + str(gmm_stats_file))
+            continue
+
 
 def gen_map_gmm_trainer(ubm, relevance_factor, convergence_threshold=1e-5, max_iterations=200):
     trainer = bob.trainer.MAP_GMMTrainer(relevance_factor, True, False, False)
@@ -440,6 +433,7 @@ def gen_map_gmm_trainer(ubm, relevance_factor, convergence_threshold=1e-5, max_i
     trainer.set_prior_gmm(ubm)
 
     return trainer
+
 
 def enroll(features, ubm, gmm_trainer):
     feature_set = numpy.vstack(features)
@@ -452,17 +446,14 @@ def enroll(features, ubm, gmm_trainer):
     # return the resulting gmm
     return gmm
 
-def gen_MAP_GMM_machines(ubm, all_features, gmm_trainer, dest_dir):
 
+def gen_MAP_GMM_machines(ubm, all_features, gmm_trainer, dest_dir):
     for name, class_feat_files in all_features.iteritems():
         class_feats = load_mfcc_files(class_feat_files)
         class_gmm = enroll(class_feats, ubm, gmm_trainer)
 
         gmm_file = os.path.join(dest_dir, name + '.hdf5')
         class_gmm.save(bob.io.HDF5File(gmm_file, 'w'))
-
-
-
 
 
 def gen_filedict(filelist):
@@ -473,7 +464,6 @@ def gen_filedict(filelist):
         filedict[name].append(f)
 
     return filedict
-
 
 
 def gen_kmeans(training_set, number_of_gaussians):
@@ -492,6 +482,7 @@ def gen_kmeans(training_set, number_of_gaussians):
     kmeans_trainer.train(kmeans, training_set)
 
     return kmeans
+
 
 def gen_ubm(kmeans, training_set, trainer_convergence_threshold, trainer_max_iterations):
     logger.info('Generating UBM')
@@ -515,55 +506,3 @@ def gen_ubm(kmeans, training_set, trainer_convergence_threshold, trainer_max_ite
     trainer.train(ubm, training_set)
 
     return ubm
-
-#1. Extract and save features from training files
-# recursively_extract_features(train_sounds_path, train_features_path)
-#
-# #2. Extract and save features from evaluation files
-# recursively_extract_features(eval_sounds_path, eval_features_path)
-#
-# #path = '/home/timo/temp/dest/valid'
-# #dest = '/Tavara/Ohjelmointi/BirDetect/birds/features'
-#
-#
-# #3. Read training features to array
-# train_features = recursive_load_mfcc_files(train_features_path)
-#
-#
-# #4. array is converted to multidimensional ndarray
-# train_features = numpy.vstack(train_features)
-#
-# #5. Clustering the train data using k-means and save result
-# kmeans = train_k_means(train_features, num_gauss)
-# kmeans.save(bob.io.HDF5File(kmeans_file, 'w'))
-#
-#
-# #6. Create the universal background model
-#
-#
-# #7. Train ubm-gmm and save result
-# ubm = train_ubm_gmm_with_features(kmeans, train_features, ubm_convergence_threshold, ubm_max_iterations)
-# #Save ubm
-# ubm.save(bob.io.HDF5File(ubm_file, "w"))
-#
-# #8. Compute GMM sufficient statistics for both training and eval sets
-# dim = train_features.shape[1]
-# compute_gmm_sufficient_statistics(ubm, num_gauss, dim, train_features_path, gmm_stats_path)
-#
-# #9. Training TV and Sigma matrices
-# gmm_train_stats = recursive_load_gmm_stats(gmm_stats_path)
-#
-# ivec_machine = train_tv(gmm_train_stats, ubm)
-#
-# #save the TV matrix
-# ivec_machine.save(bob.io.HDF5File(tv_file, 'w'))
-#
-# #10. Extract i-vectors of the eval set..."
-# extract_i_vectors(gmm_stats_path, ivec_dir, ivec_machine)
-#
-#
-#
-# #11. Write score file
-#
-# #Map adaptointi: https://www.idiap.ch/software/bob/docs/releases/last/sphinx/html/TutorialsTrainer.html
-#

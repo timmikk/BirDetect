@@ -4,6 +4,7 @@ import os
 
 __author__ = 'Timo Mikkilä'
 
+
 def read_names_from_file(name_file, reg_exp):
     names = {}
     prog = re.compile(reg_exp)
@@ -23,11 +24,10 @@ def read_names_from_file(name_file, reg_exp):
 
     return names
 
+
 def read_filenames(files, reg_exp):
     names = {}
     prog = re.compile(reg_exp)
-
-
 
     for f in files:
         basename = os.path.basename(f)
@@ -63,7 +63,7 @@ def rename_files(new_names, files, dry_run):
         num = 2
         while os.path.exists(new_f):
             print 'File exists: ' + new_f
-            new_name = new_names[key] + '_' + str(num) +file_ext
+            new_name = new_names[key] + '_' + str(num) + file_ext
             new_f = os.path.join(dirname, new_name)
             num += 1
         else:
@@ -71,14 +71,14 @@ def rename_files(new_names, files, dry_run):
                 os.rename(f, new_f)
             print 'rename ' + f + ' -> ' + new_f
 
+
 def rename(names_file, path, name_req_exp, file_reg_exp, dry_run):
     file_obj = open(names_file, 'r')
     names = read_names_from_file(file_obj, name_req_exp)
-    files = [ os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) ]
+    files = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
     #files = [ f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) ]
     f_names = read_filenames(files, file_reg_exp)
     rename_files(names, f_names, dry_run)
-
 
 
 #def rename_files(name_file, file_folder, name_req_exp, file_req_exp):

@@ -11,11 +11,14 @@ import analyze
 import evaluate
 import utils
 
+
 __author__ = 'Timo Mikkilä'
+
 
 class ubm_gmm_worker:
     logger = logging.getLogger(__name__)
     paths = Bunch()
+
     def __init__(self, paths, params):
         self.paths = paths
         self.params = params
@@ -28,14 +31,17 @@ class ubm_gmm_worker:
         current_class_file_num = 0
         for class_gmm_file in class_gmms_files:
             current_class_file_num += 1
-            self.logger.info('Calculating sores ' + str(current_class_file_num) + '/' + str(class_file_num) +  ' for class file ' + class_gmm_file)
+            self.logger.info('Calculating sores ' + str(current_class_file_num) + '/' + str(
+                class_file_num) + ' for class file ' + class_gmm_file)
             for stats_file in probe_stats_files:
                 #self.logger.debug('calculating sore. Class file: ' + class_gmm_file + ' stats file: + stats_file')
                 class_gmm = analyze.load_gmm_machine_file(class_gmm_file)
                 stats = analyze.load_gmm_stats_file(stats_file)
-                score = distance_function([class_gmm], ubm, [stats])[0,0]
+                score = distance_function([class_gmm], ubm, [stats])[0, 0]
 
-                f.write('\"'+os.path.basename(class_gmm_file)+ '\",\"'+os.path.basename(stats_file)+'\",\"' + str(score) + '\"\n')
+                f.write(
+                    '\"' + os.path.basename(class_gmm_file) + '\",\"' + os.path.basename(stats_file) + '\",\"' + str(
+                        score) + '\"\n')
         f.close()
 
     def calc_scores_fast(self, class_gmms_files, probe_stats_files, distance_function, ubm, score_file):
@@ -58,7 +64,8 @@ class ubm_gmm_worker:
         f = open(score_file, 'w')
         for class_index, class_file in enumerate(class_gmms_files):
             for stats_index, stats_file in enumerate(probe_stats_files):
-                f.write('\"'+os.path.basename(class_file)+ '\",\"'+os.path.basename(stats_file)+'\",\"' + str(score[class_index][stats_index]) + '\"\n')
+                f.write('\"' + os.path.basename(class_file) + '\",\"' + os.path.basename(stats_file) + '\",\"' + str(
+                    score[class_index][stats_index]) + '\"\n')
 
         # class_file_num = len(class_gmms_files)
         # current_class_file_num = 0
@@ -78,11 +85,13 @@ class ubm_gmm_worker:
         total_start_time = time.clock()
         #1. Extract and save features from training files
         if os.path.exists(self.paths.features_train):
-            self.logger.warn('Features are not extracted for train data as folder already exists(' + self.paths.features_train + ').')
+            self.logger.warn(
+                'Features are not extracted for train data as folder already exists(' + self.paths.features_train + ').')
         else:
             self.logger.info('Extracting mfcc features from train data')
             self.logger.debug('From ' + self.paths.sounds_train + ' to ' + self.paths.features_train)
-            analyze.recursively_extract_features(self.paths.sounds_train, self.paths.features_train, self.params.mfcc_wl,
+            analyze.recursively_extract_features(self.paths.sounds_train, self.paths.features_train,
+                                                 self.params.mfcc_wl,
                                                  self.params.mfcc_ws, self.params.mfcc_nf, self.params.mfcc_nceps,
                                                  self.params.mfcc_fmin, self.params.mfcc_fmax, self.params.mfcc_d_w,
                                                  self.params.mfcc_pre, self.params.mfcc_mel)
@@ -147,7 +156,8 @@ class ubm_gmm_worker:
             #ubm = analyze.train_ubm_gmm_with_features(kmeans, features_train, self.params.ubm_gmm_num_gauss,
             #                                          self.params.ubm_gmm_dim, self.params.ubm_convergence_threshold,
             #                                          self.params.ubm_max_iterations)
-            ubm = analyze.gen_ubm(kmeans, training_features_set, self.params.ubm_trainer_convergence_threshold, self.params.ubm_trainer_max_iterations)
+            ubm = analyze.gen_ubm(kmeans, training_features_set, self.params.ubm_trainer_convergence_threshold,
+                                  self.params.ubm_trainer_max_iterations)
             #Save ubm
             self.logger.info('Save UBM to file: ' + self.paths.ubm_file)
             ubm.save(bob.io.HDF5File(self.paths.ubm_file, "w"))
@@ -192,7 +202,7 @@ class ubm_gmm_worker:
             class_gmms_files = analyze.recursive_find_all_files(self.paths.class_gmms, '.hdf5')
             eval_gmm_stats_files = analyze.recursive_find_all_files(self.paths.gmm_stats_eval, '.hdf5')
             self.calc_scores_fast(class_gmms_files, eval_gmm_stats_files, bob.machine.linear_scoring, ubm,
-                                self.paths.scores_ubm_gmm)
+                                  self.paths.scores_ubm_gmm)
 
 
         #TEST
@@ -228,7 +238,8 @@ class ubm_gmm_worker:
         self.logger.info('Evaluating map adapted gmm results')
         self.logger.info('Finding negatives and positives from score file')
         negatives, positives = evaluate.parse_scores_from_file(self.paths.scores_ubm_gmm)
-        evaluate.evaluate_score_file(negatives, positives, self.paths.eval_roc_ubm_gmm, self.paths.eval_det_ubm_gmm, self.paths.eval_ubm_gmm_log)
+        evaluate.evaluate_score_file(negatives, positives, self.paths.eval_roc_ubm_gmm, self.paths.eval_det_ubm_gmm,
+                                     self.paths.eval_ubm_gmm_log)
 
         total_end_time = time.clock()
 

@@ -46,81 +46,6 @@ logger.info('dest_abs_path: ' + dest_abs_path)
 logger.info('invalid_splits_path: ' + invalid_splits_path)
 logger.info('plots_path: ' + plots_path)
 
-def show_spectogram(wav_file):
-    #wavfile = sys.argv[1]
-    wav_file = 'data/01_Track_1.wav'
-
-    (rate, signal) = scipy.io.wavfile.read(str(wav_file))
-
-    signal = np.cast['float'](signal)
-    signal = signal[:, 0]
-
-    # Parameters used to extract MFCC (These could be defined in a separate configuration file)
-    wl = 20  # The window length in milliseconds
-    ws = 10  # The window shift of the in milliseconds
-    nf = 24  # The number of filter bands
-    #nceps = 19  # The number of cepstral coefficients
-    fmin = 0.  # The minimal frequency of the filter bank
-    fmax = 4000.  # The maximal frequency of the filter bank
-    #d_w = 2  # The delta value used to compute 1st and 2nd derivatives
-    pre = 0.97  # The coefficient used for the pre-emphasis
-    mel = True  # Tell whether MFCC or LFCC are extracted
-
-    #nc = 19  # Number of cepstral coefficients
-
-    spectogrammer = bob.ap.Spectrogram(rate, wl, ws, nf, fmin, fmax, pre, mel)
-
-    spectogram = spectogrammer(signal)
-
-    plt.imshow(spectogram, aspect="auto", interpolation="none")
-    plt.show()
-
-    #sr, x = scipy.io.wavfile.read(wavfile)
-
-    ## Parameters: 15ms step, 30ms window
-    #nstep = int(sr * 0.015)
-    #nwin = int(sr * 0.03)
-    #nfft = nwin
-    #
-    #window = np.hamming(nwin)
-
-    ## will take windows x[n1:n2].  generate
-    ## and loop over n2 such that all frames
-    ## fit within the waveform
-    #nn = range(nwin, len(x), nstep)
-
-    #X = np.zeros((len(nn), nfft / 2))
-
-    #for i, n in enumerate(nn):
-    #    xseg = x[n - nwin:n]
-    #    z = np.fft.fft(window * xseg, nfft)
-    #    X[i, :] = np.log(np.abs(z[:nfft / 2]))
-
-    #plt.imshow(X.T, interpolation='nearest',
-    #           origin='lower',
-    #           aspect='auto')
-
-    #plt.show()
-
-
-def show_energy(wavfile):
-    # Parameters used to extract MFCC (These could be defined in a separate configuration file)
-    wl = 20  # The window length in milliseconds
-    ws = 10  # The window shift of the in milliseconds
-
-    (rate, signal) = scipy.io.wavfile.read(str(wavfile))
-
-    signal = np.cast['float'](signal)
-    signal = signal[:, 0]
-
-    energizer = bob.ap.Energy(rate, wl, ws)
-
-    energy = energizer(signal)
-
-    #plt.imshow(energy, aspect="auto", interpolation="none")
-    plt.plot(energy)
-    # plt.show()
-
 
 def smooth(x, window_len=11, window='hanning'):
     if x.ndim != 1:
@@ -270,17 +195,6 @@ def filter_out_large_values(array, max_value, signal_length, max_pos_diff):
             invalid_split_points[key] = value
 
     return (valid_split_points, invalid_split_points)
-    # remove_keys = []
-    # for key in array:
-    #     value = array[key]
-    #     if (value-value_mean)/max_value > max_pos_diff:
-    #         remove_keys.append(key)
-    #
-    #     print str((value-value_mean)/max_value*100)
-    #
-    # for key in remove_keys:
-    #     logger.debug('Removing value [' + str(key) + '] = ' + str(array[key]))
-    #     array.pop(key)
 
 
 def find_silent_moments(energy, min_trigger=0.86, min_point_win=20, chunk_size=50):
@@ -321,22 +235,23 @@ def validate_signal(signal, rate, min_energy=0.5, min_length=0.5):
         return False
     mean_e = mean_energy(signal, rate)
     signal_size = signal.size
-    min_len = min_length*rate
+    min_len = min_length * rate
 
-    logger.debug('Validating signal: energy_mean: ' + str(mean_e) + ' len: ' + str(signal_size*rate))
+    logger.debug('Validating signal: energy_mean: ' + str(mean_e) + ' len: ' + str(signal_size * rate))
 
-    if signal.size < min_length*rate:
-        logger.debug('Signal is too short (' + str(signal.size*rate) + ' < '+ str(min_length) +') -> Signal is invalid')
+    if signal.size < min_length * rate:
+        logger.debug(
+            'Signal is too short (' + str(signal.size * rate) + ' < ' + str(min_length) + ') -> Signal is invalid')
         return False
 
     logger.debug('Signal mean energy is ' + str(mean_e))
 
     if np.isnan(mean_e):
-        logger.debug('Signal is empty ('+ str(mean_e) +')')
+        logger.debug('Signal is empty (' + str(mean_e) + ')')
         return False
 
     if mean_e < min_energy:
-        logger.debug('Signal mean energy ('+ str(mean_e) +') is under' + str(min_energy) + ' -> Signal is invalid')
+        logger.debug('Signal mean energy (' + str(mean_e) + ') is under' + str(min_energy) + ' -> Signal is invalid')
         return False
 
     logger.debug('Signal is valid')
@@ -360,9 +275,6 @@ def split_signal_by_silence(signal, rate):
             valid_signals.append(x)
         else:
             invalid_signals.append(x)
-
-    #signals[:] = [x for x in signals if not validate_signal(x, rate)]
-    #signals[:] = [x for x in signals if not mean_energy(x, rate) < 2.1]
 
     return (valid_signals, invalid_signals)
 
@@ -493,64 +405,9 @@ def plot_wav(wav_file, fignum):
 
     (energy_silent_points, energy_inv_silent_points) = find_silent_moments(energy)
 
-    #energy_silent_points = find_silent_moments(energy)
-    #signal_silent_points = [int(x * rate / 100) for x in energy_silent_points]
-    #signal_inv_silent_points = [int(x * rate / 100) for x in energy_inv_silent_points]
-
     log_signal = signal * 10
     log_signal = np.log10(signal)
 
-    #Plot log_signal
-    #ax = axarr[0, 0]
-
-
-    #  chunk_size = 44100
-    #  pad_size = math.ceil(float(signal.size)/chunk_size)*chunk_size - signal.size
-    #  signal = np.append(signal, np.zeros(pad_size)*np.NaN)
-    #
-    #  chunks = signal.reshape((-1, chunk_size))
-    # # max_filtered = stats.nanmax(chunks, axis=1)
-    # # min_filtered = stats.nanmin(chunks, axis=1)
-    #  mean_filtered = stats.nanmean(chunks, axis=0)
-    #  std_filtered = stats.nanstd(chunks, axis=0)
-    #
-    #  min_filtered = np.nanmin(chunks, axis=0)
-    #  max_filtered = np.nanmax(chunks, axis=0)
-    #std_filtered = std_filtered[~np.isnan(std_filtered)]
-
-    #chunksize = 10000
-    #numchunks = y.size // chunksize
-    #ychunks = y[:chunksize*numchunks].reshape((-1, chunksize))
-    #xchunks = x[:chunksize*numchunks].reshape((-1, chunksize))
-
-    # Calculate the max, min, and means of chunksize-element chunks...
-    #max_env = ychunks.max(axis=1)
-    #min_env = ychunks.min(axis=1)
-    #ycenters = ychunks.mean(axis=1)
-    #xcenters = xchunks.mean(axis=1)
-
-    # Now plot the bounds and the mean...
-
-    #ax.fill_between(xcenters, min_env, max_env, color='gray',
-    #                edgecolor='none', alpha=0.5)
-    #    ax.plot(std_filtered, linewidth=0.4)
-
-
-    #    ax.plot(log_signal)
-    #    ax.plot(smooth(log_signal, 44000), color='y')
-    #    ax.set_title(filename)
-    #plot_split_points(ax, signal_silent_points, signal_inv_silent_points)
-
-    #Plot signal array
-    #    ax = axarr[1, 0]
-    #    ax.plot(signal)
-    #    ax.plot(max_filtered, linewidth=0.4)
-    #    ax.plot(min_filtered, linewidth=0.4, color='g')
-    #ax.plot(smooth(signal, 200), color='y')
-    #    ax.set_title(filename)
-    #plot_split_points(ax, signal_silent_points, signal_inv_silent_points)
-
-    #Plot energy array
 
     chunk_size = 50
     chunks = chunkyfy(energy, chunk_size)
@@ -563,9 +420,7 @@ def plot_wav(wav_file, fignum):
 
     ax = axarr[0, 0]
     ax.plot(energy, linewidth=0.4, color='gray')
-    #ax.plot(smooth(energy, 200), color='y', linewidth=0.4)
-    #ax.fill_between(x, min_filtered, max_filtered, color='gray',
-    #            edgecolor='none', alpha=0.5)
+
     ax.plot(x, mean_filtered, color='b', linewidth=0.4)
 
     ax.set_title(filename)
@@ -631,52 +486,35 @@ def is_wav_file(file):
 
 def recursive_plot(path, pdf_file, img_path):
     wavs = recursive_list_wav_files(path)
-    #wavs_split = split_list(wavs, 1)
     fignum = 0
-    #figures = []
-    #pp = PdfPages(pdf_file)
     for wav in wavs:
-        #figure = plot_wavs(wav_split, fignum, 4, 2)
         figure = plot_wav(wav, fignum)
         filename = os.path.basename(wav)
         if figure != None:
-            #pp.savefig(figure, dpi=200)
             image_file = os.path.join(img_path, str(filename) + '_fig' + str(fignum) + '.png')
 
-
             figure.savefig(image_file, dpi=200)
-            #plt.show()
-            #figures.append(figure)
-        fignum += 1
-        #plt.show()
-        #if len(figures):
 
-        #    pp.savefig(figures[0])
-        #for fig in figures:
-        #    pp.savefig(fig)
-        #pp.close
+        fignum += 1
+
 
 
 def recursively_plot_wav_files(path, img_path, fignum=0):
-
     for f in os.listdir(path):
         f_location = os.path.join(path, f)
         if is_wav_file(f_location):
             logger.debug('Process file: ' + f_location)
             stripped_filename = strip_filename(f)
-            #split_dir = os.path.join(img_path, stripped_filename)
+
             split_dir = img_path
 
             figure = plot_wav(unicode(f_location), fignum)
             if figure != None:
                 check_or_make_dir(split_dir)
-                #pp.savefig(figure, dpi=200)
                 image_file = os.path.join(split_dir, str(f) + '_fig' + str(fignum) + '.png')
                 logger.debug('Save plot to file: ' + image_file)
                 figure.savefig(unicode(image_file), dpi=200)
                 logger.debug('Plot saved')
-                #plt.show()
-                #figures.append(figure)
             fignum += 1
 
         elif os.path.isdir(f_location):
@@ -696,10 +534,7 @@ def recursively_split_wav_files(path, dest, invalid_dest):
         f_location = os.path.join(path, f)
         if is_wav_file(f_location):
             logger.debug('Process file: ' + f_location)
-            #stripped_filename = strip_filename(f)
-            #split_dir = os.path.join(dest, stripped_filename)
-            #invalid_split_dir = os.path.join(invalid_dest, stripped_filename)
-            #split_wav_by_silence(f_location, split_dir, invalid_split_dir)
+
             split_wav_by_silence(f_location, dest, invalid_dest)
 
         elif os.path.isdir(f_location):
@@ -712,7 +547,6 @@ def recursively_split_wav_files(path, dest, invalid_dest):
         else:
             logger.info('Unknown file type: ' + str(f_location))
             continue
-
 
 
 recursively_split_wav_files(src_abs_path, dest_abs_path, invalid_splits_path)
